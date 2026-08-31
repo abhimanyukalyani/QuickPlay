@@ -1,0 +1,916 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Longwave — Play Free Online | QuickPlay</title>
+<meta name="description" content="Longwave is a free browser idle game. Listen for a faint signal, spend it on antennas that listen for you, and decode a transmission line by line. It keeps running while the tab is closed, and your progress is saved in your own browser.">
+<link rel="canonical" href="https://quickplay.pages.dev/games/longwave/">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#04120C">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="QuickPlay">
+<meta property="og:title" content="Longwave — Play Free Online | QuickPlay">
+<meta property="og:description" content="Longwave is a free browser idle game. Listen for a faint signal, spend it on antennas that listen for you, and decode a transmission line by line. It keeps running while the tab is closed, and your progress is saved in your own browser.">
+<meta property="og:url" content="https://quickplay.pages.dev/games/longwave/">
+<meta property="og:image" content="https://quickplay.pages.dev/og/longwave.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Longwave — Play Free Online | QuickPlay">
+<meta name="twitter:description" content="Longwave is a free browser idle game. Listen for a faint signal, spend it on antennas that listen for you, and decode a transmission line by line. It keeps running while the tab is closed, and your progress is saved in your own browser.">
+<meta name="twitter:image" content="https://quickplay.pages.dev/og/longwave.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Chivo:wght@400;700;900&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root {
+    --deep: #04120C;
+    --panel: #081B13;
+    --panel-2: #0B241A;
+    --line: rgba(91, 255, 165, 0.16);
+    --line-strong: rgba(91, 255, 165, 0.34);
+    --phos: #5BFFA5;
+    --phos-dim: #3E9E6C;
+    --amber: #FFC46B;
+    --text: #DFFFEE;
+    --dim: #6E9C85;
+
+    --display: "Anton", "Haettenschweiler", "Arial Narrow", sans-serif;
+    --body: "Chivo", "Helvetica Neue", Arial, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--deep);
+    color: var(--text);
+    font-family: var(--body);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .frame {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 54px clamp(14px, 3vw, 30px) 60px;
+  }
+
+  /* ---------------- masthead ---------------- */
+  .top {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 18px 26px;
+  }
+
+  .brand h1 {
+    margin: 0;
+    font-family: var(--display);
+    font-size: clamp(30px, 5vw, 44px);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    line-height: 1;
+  }
+
+  .brand p {
+    margin: 6px 0 0;
+    font-family: var(--mono);
+    font-size: 9.5px;
+    font-weight: 600;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--dim);
+  }
+
+  .readout { text-align: right; }
+
+  .readout .big {
+    margin: 0;
+    font-family: var(--display);
+    font-size: clamp(38px, 7vw, 62px);
+    line-height: 0.9;
+    color: var(--phos);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .readout .rate {
+    margin: 4px 0 0;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--dim);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---------------- scope ---------------- */
+  .scope {
+    margin-top: 20px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--panel);
+    overflow: hidden;
+  }
+
+  #trace { display: block; width: 100%; height: 92px; }
+
+  /* ---------------- columns ---------------- */
+  .cols {
+    margin-top: 20px;
+    display: grid;
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+    gap: 20px;
+    align-items: start;
+  }
+
+  @media (max-width: 860px) {
+    .cols { grid-template-columns: minmax(0, 1fr); }
+  }
+
+  .panel {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--panel);
+    padding: 16px;
+  }
+
+  .panel + .panel { margin-top: 20px; }
+
+  h2 {
+    margin: 0 0 12px;
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--dim);
+  }
+
+  /* ---------------- listen ---------------- */
+  .listen {
+    width: 100%;
+    border: 1px solid var(--line-strong);
+    border-radius: 8px;
+    background: rgba(91, 255, 165, 0.08);
+    color: var(--phos);
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    padding: 20px 16px;
+    cursor: pointer;
+  }
+
+  .listen:hover { background: rgba(91, 255, 165, 0.16); }
+  .listen:active { transform: translateY(1px); }
+  .listen small {
+    display: block;
+    margin-top: 6px;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    color: var(--dim);
+  }
+
+  :focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+
+  /* ---------------- lists ---------------- */
+  .rows { display: flex; flex-direction: column; gap: 8px; }
+
+  .row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 4px 14px;
+    align-items: center;
+    width: 100%;
+    text-align: left;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--panel-2);
+    color: var(--text);
+    font-family: var(--body);
+    padding: 11px 13px;
+    cursor: pointer;
+  }
+
+  .row:hover:not(:disabled) { border-color: var(--line-strong); }
+  .row:disabled { opacity: 0.42; cursor: not-allowed; }
+  .row[hidden] { display: none; }   /* the display above would otherwise beat [hidden] */
+
+  .row .name {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+  }
+
+  .row .cost {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--phos);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .row .blurb {
+    grid-column: 1;
+    margin: 0;
+    font-size: 11.5px;
+    line-height: 1.45;
+    color: var(--dim);
+  }
+
+  .row .owned {
+    grid-column: 2;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--dim);
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .row.up .cost { color: var(--amber); }
+
+  .empty {
+    margin: 0;
+    font-family: var(--mono);
+    font-size: 11px;
+    line-height: 1.7;
+    color: var(--dim);
+  }
+
+  /* ---------------- transmission ---------------- */
+  .log { display: flex; flex-direction: column; gap: 9px; }
+
+  .log p {
+    margin: 0;
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1.65;
+    color: var(--phos);
+    padding-left: 16px;
+    position: relative;
+    text-wrap: pretty;
+  }
+
+  .log p::before {
+    content: "›";
+    position: absolute;
+    left: 0;
+    color: var(--phos-dim);
+  }
+
+  .log p.next { color: var(--dim); }
+
+  /* ---------------- retune ---------------- */
+  .retune {
+    width: 100%;
+    border: 1px solid rgba(255, 196, 107, 0.4);
+    border-radius: 6px;
+    background: rgba(255, 196, 107, 0.08);
+    color: var(--amber);
+    font-family: var(--mono);
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    padding: 13px;
+    cursor: pointer;
+  }
+
+  .retune:hover:not(:disabled) { background: rgba(255, 196, 107, 0.16); }
+  .retune:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .note {
+    margin: 10px 0 0;
+    font-size: 11.5px;
+    line-height: 1.55;
+    color: var(--dim);
+  }
+
+  /* ---------------- welcome back ---------------- */
+  .back {
+    margin-top: 20px;
+    border: 1px solid rgba(255, 196, 107, 0.34);
+    border-radius: 8px;
+    background: rgba(255, 196, 107, 0.07);
+    padding: 14px 16px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .back[hidden] { display: none; }
+
+  .back p {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--text);
+  }
+
+  .back b { color: var(--amber); }
+
+  .back button {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--text);
+    background: transparent;
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    padding: 8px 14px;
+    cursor: pointer;
+  }
+
+  .foot {
+    margin-top: 26px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--dim);
+  }
+
+  .foot button {
+    font: inherit;
+    color: var(--dim);
+    background: transparent;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 7px 13px;
+    cursor: pointer;
+  }
+
+  .foot button:hover { color: var(--text); border-color: var(--line-strong); }
+
+  .sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+</style>
+<style>
+  .qp-home {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    z-index: 9999;
+    display: inline-block;
+    padding: 7px 12px;
+    border: 1px solid rgba(244, 240, 255, 0.18);
+    border-radius: 999px;
+    background: rgba(10, 7, 18, 0.72);
+    color: #f4f0ff;
+    font: 600 11px/1 ui-monospace, "SFMono-Regular", Menlo, monospace;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    text-decoration: none;
+    backdrop-filter: blur(6px);
+  }
+  .qp-home:hover { border-color: rgba(244, 240, 255, 0.4); }
+  
+</style>
+</head>
+<body>
+<a class="qp-home" href="/">← QuickPlay</a>
+<div class="frame">
+  <header class="top">
+    <div class="brand">
+      <h1>Longwave</h1>
+      <p>Idle · listening station</p>
+    </div>
+    <div class="readout">
+      <p class="big" id="signal">0</p>
+      <p class="rate" id="rate">0.0 signal/sec</p>
+    </div>
+  </header>
+
+  <div class="scope"><canvas id="trace" aria-hidden="true"></canvas></div>
+
+  <div class="back" id="back" hidden>
+    <p id="back-text"></p>
+    <button type="button" id="back-ok">Dismiss</button>
+  </div>
+
+  <div class="cols">
+    <div>
+      <div class="panel">
+        <h2>Antenna</h2>
+        <button class="listen" id="listen" type="button">
+          Listen
+          <small id="listen-gain">+1 signal</small>
+        </button>
+      </div>
+
+      <div class="panel">
+        <h2>Hardware</h2>
+        <div class="rows" id="gens"></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="panel">
+        <h2>Upgrades</h2>
+        <div class="rows" id="ups"></div>
+        <p class="empty" id="ups-empty">Nothing to install yet.<br>Buy hardware and they'll show up.</p>
+      </div>
+
+      <div class="panel">
+        <h2>Transmission</h2>
+        <div class="log" id="log"></div>
+      </div>
+
+      <div class="panel" id="retune-panel" hidden>
+        <h2>Retune</h2>
+        <button class="retune" id="retune" type="button">Retune the array</button>
+        <p class="note" id="retune-note"></p>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot">
+    <span id="saved">Saved in this browser</span>
+    <button type="button" id="wipe">Erase save</button>
+  </div>
+</div>
+
+<p class="sr" id="live" role="status" aria-live="polite"></p>
+
+<script>
+(function () {
+  "use strict";
+
+  var SAVE_KEY = "longwave.save";
+  var SAVE_VERSION = 1;
+  var OFFLINE_CAP = 8 * 3600;   // seconds of away-time that still pay out
+  var OFFLINE_RATE = 0.6;       // and at what fraction of the live rate
+  var CORE_AT = 1e8;            // total signal before a retune is worth anything
+
+  var GENS = [
+    { name: "Dipole",         blurb: "A wire in the wind.",                cost: 15,      rate: 0.15 },
+    { name: "Loop antenna",   blurb: "Nulls the noise, keeps the sky.",    cost: 120,     rate: 1.1 },
+    { name: "Dish",           blurb: "Four metres of listening.",          cost: 1300,    rate: 9 },
+    { name: "Phased array",   blurb: "Many small ears, pointed together.", cost: 14000,   rate: 62 },
+    { name: "Interferometer", blurb: "Two stations, one baseline.",        cost: 175000,  rate: 420 },
+    { name: "Deep listener",  blurb: "Buried cold, aimed at nothing.",     cost: 2100000, rate: 3100 }
+  ];
+
+  // need: [generator index, how many owned] before the upgrade is offered
+  var UPS = [
+    { name: "Cooled preamp",  blurb: "Dipoles ×3.",              cost: 220,      need: [0, 5],  gen: 0, mult: 3 },
+    { name: "Copper ground",  blurb: "Dipoles ×3 again.",        cost: 3400,     need: [0, 20], gen: 0, mult: 3 },
+    { name: "Tuned capacitor",blurb: "Loop antennas ×3.",        cost: 1800,     need: [1, 5],  gen: 1, mult: 3 },
+    { name: "Quiet hours",    blurb: "Everything ×1.5.",         cost: 9000,     need: [1, 15], all: 1.5 },
+    { name: "Surface figure", blurb: "Dishes ×3.",               cost: 22000,    need: [2, 5],  gen: 2, mult: 3 },
+    { name: "Sync tap",       blurb: "Listening also pays 10% of your rate.", cost: 46000, need: [2, 10], tap: 0.1 },
+    { name: "Phase lock",     blurb: "Everything ×2.",           cost: 260000,   need: [3, 5],  all: 2 },
+    { name: "Cryostat",       blurb: "Phased arrays ×3.",        cost: 480000,   need: [3, 12], gen: 3, mult: 3 },
+    { name: "Long baseline",  blurb: "Interferometers ×3.",      cost: 3100000,  need: [4, 5],  gen: 4, mult: 3 },
+    { name: "Dark sky law",   blurb: "Everything ×2.",           cost: 12000000, need: [4, 12], all: 2 },
+    { name: "Bore hole",      blurb: "Deep listeners ×3.",       cost: 42000000, need: [5, 5],  gen: 5, mult: 3 },
+    { name: "Patient ear",    blurb: "Everything ×2.",           cost: 180000000,need: [5, 15], all: 2 }
+  ];
+
+  var MESSAGE = [
+    { at: 60,    line: "carrier found. it is not ours." },
+    { at: 900,   line: "the same eleven seconds, again and again." },
+    { at: 12000, line: "inside the repeat: counting. primes, up to 89." },
+    { at: 1.4e5, line: "after the primes, a gap the length of the count." },
+    { at: 1.7e6, line: "the gap is not empty. it is quieter than the sky." },
+    { at: 2e7,   line: "quieter than the sky means it is being held open." },
+    { at: 2.4e8, line: "held open for an answer. they left room for us." },
+    { at: 3e9,   line: "we have been listening for years. we have never once replied." }
+  ];
+
+  var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  var el = {
+    signal: document.getElementById("signal"),
+    rate: document.getElementById("rate"),
+    listen: document.getElementById("listen"),
+    listenGain: document.getElementById("listen-gain"),
+    gens: document.getElementById("gens"),
+    ups: document.getElementById("ups"),
+    upsEmpty: document.getElementById("ups-empty"),
+    log: document.getElementById("log"),
+    retunePanel: document.getElementById("retune-panel"),
+    retune: document.getElementById("retune"),
+    retuneNote: document.getElementById("retune-note"),
+    back: document.getElementById("back"),
+    backText: document.getElementById("back-text"),
+    backOk: document.getElementById("back-ok"),
+    saved: document.getElementById("saved"),
+    wipe: document.getElementById("wipe"),
+    live: document.getElementById("live"),
+    trace: document.getElementById("trace")
+  };
+
+  var state = blank();
+
+  function blank() {
+    return {
+      signal: 0,
+      total: 0,          // lifetime signal, drives the transmission
+      run: 0,            // signal earned since the last retune, drives cores
+      owned: GENS.map(function () { return 0; }),
+      ups: [],
+      cores: 0,
+      seen: 0            // how many transmission lines have been revealed
+    };
+  }
+
+  /* ---------- numbers ---------- */
+  var SUFFIX = ["", "K", "M", "B", "T", "Qa", "Qi", "Sx", "Sp", "Oc"];
+
+  function fmt(n) {
+    if (!isFinite(n)) return "∞";
+    if (n < 1000) return n < 10 && n % 1 !== 0 ? n.toFixed(1) : String(Math.floor(n));
+    var tier = Math.floor(Math.log10(n) / 3);
+    if (tier >= SUFFIX.length) return n.toExponential(2);
+    var scaled = n / Math.pow(1000, tier);
+    return (scaled < 10 ? scaled.toFixed(2) : scaled < 100 ? scaled.toFixed(1) : Math.floor(scaled)) + SUFFIX[tier];
+  }
+
+  function plural(n, word) { return n + " " + word + (n === 1 ? "" : "s"); }
+
+  function since(seconds) {
+    if (seconds < 90) return Math.round(seconds) + " seconds";
+    if (seconds < 5400) return Math.round(seconds / 60) + " minutes";
+    return (seconds / 3600).toFixed(1) + " hours";
+  }
+
+  /* ---------- maths ---------- */
+  function has(name) { return state.ups.indexOf(name) !== -1; }
+
+  function globalMult() {
+    var m = 1 + state.cores * 0.1;
+    for (var i = 0; i < UPS.length; i++) {
+      if (UPS[i].all && has(UPS[i].name)) m *= UPS[i].all;
+    }
+    return m;
+  }
+
+  function genMult(index) {
+    var m = 1;
+    for (var i = 0; i < UPS.length; i++) {
+      if (UPS[i].gen === index && has(UPS[i].name)) m *= UPS[i].mult;
+    }
+    return m;
+  }
+
+  function rate() {
+    var total = 0;
+    for (var i = 0; i < GENS.length; i++) total += state.owned[i] * GENS[i].rate * genMult(i);
+    return total * globalMult();
+  }
+
+  function clickGain() {
+    var base = 1 * globalMult();
+    for (var i = 0; i < UPS.length; i++) {
+      if (UPS[i].tap && has(UPS[i].name)) base += rate() * UPS[i].tap;
+    }
+    return base;
+  }
+
+  function costOf(index) {
+    return Math.ceil(GENS[index].cost * Math.pow(1.15, state.owned[index]));
+  }
+
+  function coresFrom(run) {
+    return run < CORE_AT ? 0 : Math.floor(Math.sqrt(run / CORE_AT));
+  }
+
+  function unlocked(up) {
+    return state.owned[up.need[0]] >= up.need[1];
+  }
+
+  /* ---------- save ---------- */
+  function save() {
+    try {
+      state.at = Date.now();
+      state.v = SAVE_VERSION;
+      window.localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+    } catch (e) {}
+  }
+
+  function load() {
+    var raw;
+    try { raw = window.localStorage.getItem(SAVE_KEY); } catch (e) { return; }
+    if (!raw) return;
+
+    var data;
+    try { data = JSON.parse(raw); } catch (e) { return; }
+    if (!data || data.v !== SAVE_VERSION || !Array.isArray(data.owned)) return;
+
+    state.signal = +data.signal || 0;
+    state.total = +data.total || 0;
+    state.run = +data.run || 0;
+    state.cores = +data.cores || 0;
+    state.seen = +data.seen || 0;
+    state.ups = Array.isArray(data.ups) ? data.ups.slice() : [];
+    for (var i = 0; i < GENS.length; i++) state.owned[i] = +data.owned[i] || 0;
+
+    // pay for the time the tab was closed
+    var away = (Date.now() - (+data.at || Date.now())) / 1000;
+    if (away > 30) {
+      var paid = Math.min(away, OFFLINE_CAP);
+      var earned = rate() * paid * OFFLINE_RATE;
+      if (earned > 0) {
+        gain(earned);
+        el.backText.innerHTML =
+          "You were away " + since(away) + ". The station kept listening and logged <b>" +
+          fmt(earned) + " signal</b>.";
+        el.back.hidden = false;
+      }
+    }
+  }
+
+  /* ---------- play ---------- */
+  function gain(amount) {
+    state.signal += amount;
+    state.total += amount;
+    state.run += amount;
+    checkMessage();
+  }
+
+  function checkMessage() {
+    while (state.seen < MESSAGE.length && state.total >= MESSAGE[state.seen].at) {
+      state.seen++;
+      el.live.textContent = "Decoded: " + MESSAGE[state.seen - 1].line;
+      renderLog();
+    }
+  }
+
+  function buyGen(index) {
+    var cost = costOf(index);
+    if (state.signal < cost) return;
+    state.signal -= cost;
+    state.owned[index]++;
+    renderRows();
+    save();
+  }
+
+  function buyUp(up) {
+    if (has(up.name) || !unlocked(up) || state.signal < up.cost) return;
+    state.signal -= up.cost;
+    state.ups.push(up.name);
+    renderRows();
+    save();
+  }
+
+  function retune() {
+    var gained = coresFrom(state.run);
+    if (gained < 1) return;
+
+    state.cores += gained;
+    state.signal = 0;
+    state.run = 0;
+    state.owned = GENS.map(function () { return 0; });
+    state.ups = [];
+
+    el.live.textContent = "Retuned. " + plural(gained, "core") + " added.";
+    renderRows();
+    renderLog();
+    save();
+  }
+
+  /* ---------- rendering ---------- */
+  var cache = {};
+
+  function setText(node, key, value) {
+    if (cache[key] === value) return;
+    cache[key] = value;
+    node.textContent = value;
+  }
+
+  var genRows = [], upRows = {};
+
+  function buildRows() {
+    for (var i = 0; i < GENS.length; i++) {
+      (function (index) {
+        var row = document.createElement("button");
+        row.type = "button";
+        row.className = "row";
+        row.innerHTML =
+          '<span class="name"></span><span class="cost"></span>' +
+          '<p class="blurb"></p><span class="owned"></span>';
+        row.querySelector(".name").textContent = GENS[index].name;
+        row.querySelector(".blurb").textContent = GENS[index].blurb;
+        row.addEventListener("click", function () { buyGen(index); });
+        el.gens.appendChild(row);
+        genRows.push({
+          root: row,
+          cost: row.querySelector(".cost"),
+          owned: row.querySelector(".owned")
+        });
+      })(i);
+    }
+  }
+
+  function renderRows() {
+    for (var i = 0; i < GENS.length; i++) {
+      var row = genRows[i];
+      var cost = costOf(i);
+      var affordable = state.signal >= cost;
+      var visible = i === 0 || state.owned[i - 1] > 0 || state.owned[i] > 0;
+
+      row.root.hidden = !visible;
+      row.root.disabled = !affordable;
+      setText(row.cost, "gc" + i, fmt(cost));
+      setText(row.owned, "go" + i,
+        state.owned[i] + " · " + fmt(state.owned[i] * GENS[i].rate * genMult(i) * globalMult()) + "/s");
+    }
+
+    var offered = 0;
+    for (var u = 0; u < UPS.length; u++) {
+      var up = UPS[u];
+      if (has(up.name)) {
+        if (upRows[up.name]) { upRows[up.name].root.remove(); delete upRows[up.name]; }
+        continue;
+      }
+      if (!unlocked(up)) continue;
+      offered++;
+
+      if (!upRows[up.name]) {
+        (function (spec) {
+          var row = document.createElement("button");
+          row.type = "button";
+          row.className = "row up";
+          row.innerHTML =
+            '<span class="name"></span><span class="cost"></span><p class="blurb"></p>';
+          row.querySelector(".name").textContent = spec.name;
+          row.querySelector(".blurb").textContent = spec.blurb;
+          row.querySelector(".cost").textContent = fmt(spec.cost);
+          row.addEventListener("click", function () { buyUp(spec); });
+          el.ups.appendChild(row);
+          upRows[spec.name] = { root: row };
+        })(up);
+      }
+      upRows[up.name].root.disabled = state.signal < up.cost;
+    }
+
+    el.upsEmpty.hidden = offered > 0;
+
+    var cores = coresFrom(state.run);
+    el.retunePanel.hidden = state.cores === 0 && state.run < CORE_AT * 0.35;
+    el.retune.disabled = cores < 1;
+    el.retune.textContent = cores > 0 ? "Retune for " + plural(cores, "core") : "Retune the array";
+    el.retuneNote.textContent = state.cores > 0
+      ? "Holding " + plural(state.cores, "core") + " — everything ×" + (1 + state.cores * 0.1).toFixed(1) +
+        ". Retuning clears hardware and upgrades, and keeps the transmission."
+      : "Start again with cores: each one is a permanent +10% to everything. " +
+        "You need " + fmt(CORE_AT) + " signal in a run to earn the first.";
+  }
+
+  function renderLog() {
+    el.log.innerHTML = "";
+    for (var i = 0; i < state.seen; i++) {
+      var p = document.createElement("p");
+      p.textContent = MESSAGE[i].line;
+      el.log.appendChild(p);
+    }
+    var next = document.createElement("p");
+    next.className = "next";
+    next.textContent = state.seen >= MESSAGE.length
+      ? "the transmission has no more to give. it is still repeating."
+      : "next fragment at " + fmt(MESSAGE[state.seen].at) + " signal, lifetime.";
+    el.log.appendChild(next);
+  }
+
+  function renderTop() {
+    setText(el.signal, "sig", fmt(state.signal));
+    setText(el.rate, "rate", fmt(rate()) + " signal/sec");
+    setText(el.listenGain, "gain", "+" + fmt(clickGain()) + " signal");
+  }
+
+  /* ---------- scope ---------- */
+  var ctx = el.trace.getContext("2d");
+  var traceW = 0, traceH = 0, phase = 0;
+
+  function sizeTrace() {
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    traceW = el.trace.clientWidth;
+    traceH = el.trace.clientHeight;
+    el.trace.width = Math.floor(traceW * dpr);
+    el.trace.height = Math.floor(traceH * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  window.addEventListener("resize", sizeTrace);
+
+  function drawTrace(dt) {
+    if (!traceW) return;
+    phase += reduce ? 0 : dt * 1.6;
+
+    ctx.clearRect(0, 0, traceW, traceH);
+    ctx.strokeStyle = "rgba(91, 255, 165, 0.08)";
+    ctx.lineWidth = 1;
+    for (var gx = 0; gx < traceW; gx += 44) {
+      ctx.beginPath(); ctx.moveTo(gx, 0); ctx.lineTo(gx, traceH); ctx.stroke();
+    }
+    ctx.beginPath(); ctx.moveTo(0, traceH / 2); ctx.lineTo(traceW, traceH / 2); ctx.stroke();
+
+    // amplitude grows with the log of the rate, so it never pins to the ceiling
+    var power = Math.min(Math.log10(rate() + 1) / 7, 1);
+    var amp = (traceH / 2 - 8) * (0.12 + power * 0.88);
+
+    ctx.strokeStyle = "#5BFFA5";
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    for (var x = 0; x <= traceW; x += 2) {
+      var t = x / traceW * Math.PI * 8 + phase;
+      var y = traceH / 2
+        + Math.sin(t) * amp * 0.6
+        + Math.sin(t * 2.7 + phase * 0.6) * amp * 0.25
+        + Math.sin(t * 6.1 + phase * 1.3) * amp * 0.12;
+      if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+
+  /* ---------- wiring ---------- */
+  el.listen.addEventListener("click", function () {
+    gain(clickGain());
+    renderRows();
+  });
+
+  el.retune.addEventListener("click", retune);
+  el.backOk.addEventListener("click", function () { el.back.hidden = true; });
+
+  el.wipe.addEventListener("click", function () {
+    if (!window.confirm("Erase this browser's Longwave save? There is no undo.")) return;
+    try { window.localStorage.removeItem(SAVE_KEY); } catch (e) {}
+    state = blank();
+    cache = {};
+    for (var name in upRows) { upRows[name].root.remove(); delete upRows[name]; }
+    renderRows();
+    renderLog();
+    el.live.textContent = "Save erased.";
+  });
+
+  window.addEventListener("pagehide", save);
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "hidden") save();
+  });
+
+  /* ---------- loop ---------- */
+  var last = 0, sinceSave = 0, sinceRows = 0;
+
+  function frame(now) {
+    var dt = last ? Math.min((now - last) / 1000, 0.25) : 0;
+    last = now;
+
+    if (dt > 0) gain(rate() * dt);
+
+    renderTop();
+    drawTrace(dt);
+
+    sinceRows += dt;
+    if (sinceRows > 0.2) { sinceRows = 0; renderRows(); }
+
+    sinceSave += dt;
+    if (sinceSave > 5) { sinceSave = 0; save(); }
+
+    requestAnimationFrame(frame);
+  }
+
+  buildRows();
+  load();
+  sizeTrace();
+  renderRows();
+  renderLog();
+  renderTop();
+
+  // Opt-in read-only handle (…/longwave/?probe=1) for balance and save testing.
+  if (window.location.search.indexOf("probe") !== -1) {
+    window.__longwave = {
+      read: function () {
+        return {
+          signal: state.signal, total: state.total, run: state.run, cores: state.cores,
+          owned: state.owned.slice(), ups: state.ups.slice(), seen: state.seen,
+          rate: rate(), click: clickGain(), costs: GENS.map(function (g, i) { return costOf(i); })
+        };
+      },
+      grant: function (amount) { gain(amount); renderRows(); },
+      save: save
+    };
+  }
+
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

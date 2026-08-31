@@ -54,6 +54,20 @@ export const games: Game[] = [
     backdrop: "#0C0605",
     added: "2026-08-31",
   },
+  {
+    slug: "longwave",
+    title: "Longwave",
+    tagline:
+      "Point a dish at the dark and listen. The signal keeps coming in while you're gone.",
+    description:
+      "Longwave is a free browser idle game. Listen for a faint signal, spend it on antennas that listen for you, and decode a transmission line by line. It keeps running while the tab is closed, and your progress is saved in your own browser.",
+    controls: "Click to listen · buy antennas · come back later",
+    tags: ["Idle", "Incremental", "Runs while away"],
+    accent: "#5BFFA5",
+    accentAlt: "#FFC46B",
+    backdrop: "#04120C",
+    added: "2026-08-31",
+  },
 ];
 
 export const gameUrl = (slug: string) => `/games/${slug}/`;

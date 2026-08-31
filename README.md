@@ -10,6 +10,7 @@ Live games:
 | Flipshield | `/games/flipshield/` | `games-src/flipshield.html` |
 | Chain Bloom | `/games/chain-bloom/` | `games-src/chain-bloom.html` |
 | Slingline | `/games/slingline/` | `games-src/slingline.html` |
+| Longwave | `/games/longwave/` | `games-src/longwave.html` |
 
 ## Running it
 
@@ -43,8 +44,8 @@ Game pages are deliberately *not* React routes. Each is a complete HTML document
 own CSS/JS, served verbatim from `public/` — so a working game can never be broken by a
 site-side change. `npm run games` (which `npm run build` runs first) wraps each source in
 that document, adding the `<title>`, description, canonical link and OG tags from
-`lib/games.ts` and the current `NEXT_PUBLIC_SITE_URL`. That means changing the site's URL
-is a rebuild, not a hand-edit of three files.
+`lib/games.ts` and whatever `lib/site.ts` resolves the site URL to for that build. That
+means changing the site's URL is a rebuild, not a hand-edit of every game page.
 
 ## Adding a game
 
