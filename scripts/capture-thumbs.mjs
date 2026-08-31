@@ -21,6 +21,12 @@ const recipes = {
     await page.click("#start");
     await page.waitForTimeout(3500);
   },
+  slingline: async (page) => {
+    await page.click("#start");
+    await page.mouse.move(600, 340);
+    await page.mouse.down();
+    await page.waitForTimeout(1100);
+  },
   "chain-bloom": async (page) => {
     await page.click("#card-action");
     await page.waitForTimeout(600);
@@ -31,7 +37,7 @@ const recipes = {
 };
 
 // Game chrome drawn on top of the canvas, hidden so the still is pure gameplay art.
-const overlays = { flipshield: ".hud" };
+const overlays = { flipshield: ".hud", slingline: ".hud" };
 
 const base = process.argv[2] ?? "http://localhost:4173";
 const browser = await chromium.launch();

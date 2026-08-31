@@ -40,6 +40,20 @@ export const games: Game[] = [
     backdrop: "#0E0920",
     added: "2026-08-31",
   },
+  {
+    slug: "slingline",
+    title: "Slingline",
+    tagline:
+      "Catch a pin, swing around it, let go at the right moment — and never stop moving.",
+    description:
+      "Slingline is a free browser arcade game about momentum. Hold to catch the nearest pin and swing around it, then release to fly off the curve towards the next one. Every pin burns out while you hang on it, so stopping is never an option.",
+    controls: "Hold the mouse, space or a finger · release to fly",
+    tags: ["Momentum", "Endless", "Hold & release"],
+    accent: "#FF7A18",
+    accentAlt: "#FFD166",
+    backdrop: "#0C0605",
+    added: "2026-08-31",
+  },
 ];
 
 export const gameUrl = (slug: string) => `/games/${slug}/`;

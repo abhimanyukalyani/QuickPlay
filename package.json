@@ -4,6 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "games": "node scripts/build-game-pages.mjs",
+    "prebuild": "node scripts/build-game-pages.mjs",
     "build": "next build",
     "lint": "eslint",
     "serve": "npx --yes serve out -l 3000"

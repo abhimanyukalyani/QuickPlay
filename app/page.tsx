@@ -57,11 +57,6 @@ export default function Home() {
             </li>
           ))}
 
-          <li className="grid min-h-[220px] place-items-center rounded-md border border-dashed border-edge-strong px-5 text-center font-mono text-[10.5px] uppercase leading-loose tracking-[0.18em] text-dim">
-            More games
-            <br />
-            in the works
-          </li>
         </ul>
 
         <AdSlot slotId="home-below-grid" className="mt-10" />

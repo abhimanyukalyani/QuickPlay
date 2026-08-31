@@ -1,0 +1,890 @@
+<title>Slingline</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Chivo:wght@400;700;900&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+  :root {
+    --pitch: #0C0605;
+    --ground: #140A08;
+    --panel: rgba(20, 10, 8, 0.94);
+    --line: rgba(255, 242, 230, 0.13);
+    --line-strong: rgba(255, 242, 230, 0.26);
+    --cream: #FFF2E6;
+    --dim: #B08A72;
+    --ember: #FF7A18;
+    --gold: #FFD166;
+    --crimson: #FF3864;
+
+    --display: "Anton", "Haettenschweiler", "Arial Narrow", sans-serif;
+    --body: "Chivo", "Helvetica Neue", Arial, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body { height: 100%; }
+
+  body {
+    margin: 0;
+    background: var(--pitch);
+    color: var(--cream);
+    font-family: var(--body);
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  #field {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    touch-action: none;
+    cursor: pointer;
+  }
+
+  /* ---------------- hud ---------------- */
+  .hud {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    padding: 52px clamp(12px, 2.2vw, 26px) clamp(12px, 2.2vw, 26px);
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    grid-template-rows: auto 1fr auto;
+    gap: 10px;
+  }
+
+  .cell { display: flex; flex-direction: column; gap: 3px; }
+  .cell.right { align-items: flex-end; text-align: right; }
+  .cell.mid { align-items: center; text-align: center; grid-column: 2; }
+
+  .label {
+    margin: 0;
+    font-family: var(--mono);
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--dim);
+  }
+
+  .value {
+    margin: 2px 0 0;
+    font-family: var(--display);
+    font-size: clamp(30px, 6vw, 52px);
+    line-height: 0.86;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .value.sm { font-size: clamp(17px, 2.6vw, 24px); }
+
+  /* line meter — how long since the last pin */
+  .meter {
+    width: clamp(74px, 12vw, 132px);
+    height: 4px;
+    margin-top: 7px;
+    border-radius: 999px;
+    background: rgba(255, 242, 230, 0.16);
+    overflow: hidden;
+  }
+
+  .meter i {
+    display: block;
+    height: 100%;
+    width: 100%;
+    border-radius: 999px;
+    background: var(--gold);
+    transform-origin: left center;
+  }
+
+  .foot {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 14px;
+  }
+
+  .keys {
+    margin: 0;
+    max-width: 48ch;
+    font-size: 12px;
+    line-height: 1.55;
+    color: rgba(255, 242, 230, 0.5);
+  }
+
+  .keys b { color: rgba(255, 242, 230, 0.92); font-weight: 700; }
+
+  kbd {
+    font-family: var(--mono);
+    font-size: 10px;
+    border: 1px solid var(--line-strong);
+    border-radius: 4px;
+    padding: 1px 5px;
+    color: var(--cream);
+  }
+
+  button {
+    pointer-events: auto;
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--cream);
+    background: rgba(255, 242, 230, 0.06);
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    padding: 9px 15px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  button:hover { background: rgba(255, 242, 230, 0.12); }
+  button:active { transform: translateY(1px); }
+  button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+  /* ---------------- gate ---------------- */
+  .gate {
+    position: fixed;
+    inset: 0;
+    z-index: 5;
+    display: grid;
+    place-items: center;
+    padding: 20px;
+    background: radial-gradient(120% 90% at 50% 40%, rgba(12, 6, 5, 0.72), rgba(12, 6, 5, 0.95));
+    backdrop-filter: blur(3px);
+  }
+
+  .gate[hidden] { display: none; }
+
+  .card {
+    width: min(430px, 100%);
+    max-height: 100%;
+    overflow: auto;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--panel);
+    padding: clamp(22px, 4vw, 32px);
+    text-align: center;
+  }
+
+  .eyebrow {
+    margin: 0;
+    font-family: var(--mono);
+    font-size: 9.5px;
+    font-weight: 600;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--dim);
+  }
+
+  .card h1 {
+    margin: 12px 0 0;
+    font-family: var(--display);
+    font-size: clamp(44px, 10vw, 66px);
+    line-height: 0.88;
+    letter-spacing: 0.015em;
+    text-transform: uppercase;
+  }
+
+  .card h1 i { font-style: normal; color: var(--ember); }
+
+  .rules {
+    margin: 20px 0 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+    text-align: left;
+  }
+
+  .rules li {
+    display: flex;
+    gap: 11px;
+    align-items: flex-start;
+    font-size: 13.5px;
+    line-height: 1.5;
+    color: rgba(255, 242, 230, 0.76);
+  }
+
+  .rules b { color: var(--cream); font-weight: 700; }
+
+  .dot {
+    flex: none;
+    width: 10px;
+    height: 10px;
+    margin-top: 5px;
+    border-radius: 50%;
+    background: var(--ember);
+  }
+
+  .dot.g { background: var(--gold); }
+  .dot.c { background: var(--crimson); }
+
+  .final {
+    margin: 20px 0 0;
+    display: flex;
+    justify-content: center;
+    gap: 26px;
+  }
+
+  .final[hidden] { display: none; }
+
+  .final div { display: flex; flex-direction: column; gap: 5px; }
+
+  .final em {
+    font-family: var(--mono);
+    font-style: normal;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--dim);
+  }
+
+  .final span {
+    font-family: var(--display);
+    font-size: 30px;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .go {
+    margin-top: 24px;
+    width: 100%;
+    font-size: 12px;
+    padding: 14px 22px;
+    letter-spacing: 0.18em;
+    color: #1A0A02;
+    background: var(--ember);
+    border-color: var(--ember);
+  }
+
+  .go:hover { background: #ff8f3d; border-color: #ff8f3d; color: #1A0A02; }
+
+  .sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  @media (max-width: 620px) {
+    .keys { font-size: 11px; }
+    .value { font-size: 30px; }
+  }
+</style>
+
+<canvas id="field" aria-label="Slingline playing field"></canvas>
+
+<div class="hud">
+  <div class="cell">
+    <p class="label">Pins</p>
+    <p class="value" id="score">0</p>
+  </div>
+
+  <div class="cell mid">
+    <p class="label">Line</p>
+    <div class="meter"><i id="meter"></i></div>
+  </div>
+
+  <div class="cell right">
+    <p class="label">Best</p>
+    <p class="value sm" id="best">0</p>
+  </div>
+
+  <div class="foot">
+    <p class="keys">
+      <b>Hold</b> the mouse, <kbd>Space</kbd> or a finger to catch the nearest pin and swing around it.
+      <b>Let go</b> to fly off. Pins burn out while you hang on them.
+    </p>
+    <button type="button" id="mute" aria-pressed="true">Sound on</button>
+  </div>
+</div>
+
+<div class="gate" id="gate">
+  <div class="card">
+    <p class="eyebrow" id="eyebrow">Momentum · endless</p>
+    <h1 id="title">Sling<i>line</i></h1>
+    <ul class="rules" id="rules">
+      <li><i class="dot"></i><span><b>Hold</b> to catch the nearest pin. You swing around it at whatever distance you caught it.</span></li>
+      <li><i class="dot g"></i><span><b>Release</b> and you fly straight off the curve. Aim yourself at the next pin.</span></li>
+      <li><i class="dot c"></i><span>A pin <b>burns out</b> while you hang on it, and the line only reaches so far. Keep moving.</span></li>
+    </ul>
+    <div class="final" id="final" hidden>
+      <div><em>Pins</em><span id="f-score">0</span></div>
+      <div><em>Best</em><span id="f-best">0</span></div>
+    </div>
+    <button class="go" id="start" type="button">Start</button>
+  </div>
+</div>
+
+<p class="sr" id="live" role="status" aria-live="polite"></p>
+
+<script>
+(function () {
+  "use strict";
+
+  var PITCH = "#0C0605", EMBER = "#FF7A18", GOLD = "#FFD166", CRIMSON = "#FF3864", CREAM = "#FFF2E6";
+
+  var MIN_ORBIT = 34;        // closest you can swing to a pin
+  var PIN_R = 9;             // drawn pin radius
+  var LOST_AFTER = 2.4;      // seconds off the line before you drop
+  var MARGIN_Y = 96;         // keeps pins clear of the HUD rows
+  var TRAIL = 30;
+
+  var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  var canvas = document.getElementById("field");
+  var ctx = canvas.getContext("2d");
+  var gate = document.getElementById("gate");
+  var elScore = document.getElementById("score");
+  var elBest = document.getElementById("best");
+  var elMeter = document.getElementById("meter");
+  var elFinal = document.getElementById("final");
+  var elFScore = document.getElementById("f-score");
+  var elFBest = document.getElementById("f-best");
+  var elEyebrow = document.getElementById("eyebrow");
+  var elRules = document.getElementById("rules");
+  var elLive = document.getElementById("live");
+  var btnStart = document.getElementById("start");
+  var btnMute = document.getElementById("mute");
+
+  var W = 0, H = 0, dpr = 1;
+
+  var state = "idle";        // idle | play | over
+  var pins = [], sparks = [], rings = [], trail = [];
+  var comet = { x: 0, y: 0, vx: 0, vy: 0 };
+  var held = null;           // the pin we're swinging on
+  var orbit = { r: 0, a: 0, dir: 1 };
+  var camX = 0, camTarget = 0;
+  var score = 0, best = 0, idle = 0, shake = 0, overIn = 0;
+  var hold = false;
+  var soundOn = true, audio = null;
+
+  var NOTES = [261.63, 293.66, 329.63, 392.0, 440.0, 523.25, 587.33, 659.25, 783.99, 880.0];
+
+  /* ---------- storage ---------- */
+  try {
+    var stored = parseInt(window.localStorage.getItem("slingline.best"), 10);
+    if (stored > 0) best = stored;
+  } catch (e) {}
+  elBest.textContent = best;
+
+  function saveBest() {
+    try { window.localStorage.setItem("slingline.best", String(best)); } catch (e) {}
+  }
+
+  /* ---------- audio ---------- */
+  function ac() {
+    if (!audio) {
+      var C = window.AudioContext || window.webkitAudioContext;
+      if (!C) return null;
+      audio = new C();
+    }
+    if (audio.state === "suspended") audio.resume();
+    return audio;
+  }
+
+  function note(step, type, vol) {
+    if (!soundOn) return;
+    try {
+      var a = ac(); if (!a) return;
+      var t = a.currentTime;
+      var o = a.createOscillator(), g = a.createGain();
+      o.type = type || "triangle";
+      o.frequency.setValueAtTime(NOTES[Math.min(step, NOTES.length - 1)], t);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(vol || 0.06, t + 0.008);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.19);
+      o.connect(g); g.connect(a.destination);
+      o.start(t); o.stop(t + 0.21);
+    } catch (e) {}
+  }
+
+  function drop() {
+    if (!soundOn) return;
+    try {
+      var a = ac(); if (!a) return;
+      var t = a.currentTime;
+      var o = a.createOscillator(), g = a.createGain();
+      o.type = "sawtooth";
+      o.frequency.setValueAtTime(210, t);
+      o.frequency.exponentialRampToValueAtTime(44, t + 0.36);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.17, t + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.42);
+      o.connect(g); g.connect(a.destination);
+      o.start(t); o.stop(t + 0.44);
+    } catch (e) {}
+  }
+
+  btnMute.addEventListener("click", function () {
+    soundOn = !soundOn;
+    btnMute.textContent = soundOn ? "Sound on" : "Sound off";
+    btnMute.setAttribute("aria-pressed", String(soundOn));
+  });
+
+  /* ---------- sizing ---------- */
+  function resize() {
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    W = window.innerWidth;
+    H = window.innerHeight;
+    canvas.width = Math.floor(W * dpr);
+    canvas.height = Math.floor(H * dpr);
+    canvas.style.width = W + "px";
+    canvas.style.height = H + "px";
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  window.addEventListener("resize", resize);
+  resize();
+
+  /* ---------- difficulty ---------- */
+  function ramp(from, to, over) {
+    var t = Math.min(score, over) / over;
+    return from + (to - from) * t;
+  }
+
+  function speed()  { return ramp(310, 640, 55); }
+  function gap()    { return ramp(250, 470, 55); }
+  function reach()  { return ramp(98, 62, 55); }   // how far the line can catch
+  // A pin's charge is spent by how far you swing round it, not by time: a wide, slow orbit
+  // would otherwise burn out before it had turned far enough to aim you anywhere useful.
+  function burn()   { return ramp(1.5, 1.05, 40); } // revolutions a pin survives
+
+  /* ---------- course ---------- */
+  function addPin() {
+    var last = pins.length ? pins[pins.length - 1] : null;
+    var x = last ? last.x + gap() * (0.86 + Math.random() * 0.3) : W * 0.34;
+    var span = Math.max(H - MARGIN_Y * 2, 120);
+    var y = MARGIN_Y + Math.random() * span;
+
+    var mover = score >= 6 && Math.random() < Math.min(0.14 + (score - 6) * 0.02, 0.5);
+    var amp = mover ? Math.min(38 + score * 2.4, 124) : 0;
+
+    // keep a moving pin's whole path inside the play band
+    if (mover) y = Math.min(Math.max(y, MARGIN_Y + amp), H - MARGIN_Y - amp);
+
+    pins.push({
+      x: x, y: y, base: y,
+      amp: amp,
+      freq: 0.55 + Math.random() * 0.55,
+      phase: Math.random() * Math.PI * 2,
+      charge: 1, alive: true, used: false, pulse: 0, lock: 0
+    });
+  }
+
+  function grow() {
+    while (!pins.length || pins[pins.length - 1].x < camX + W * 1.9) addPin();
+    while (pins.length && pins[0].x < camX - 320) pins.shift();
+  }
+
+  /* ---------- effects ---------- */
+  function spark(x, y, n, colour, power) {
+    if (reduce) return;
+    for (var i = 0; i < n; i++) {
+      var a = Math.random() * Math.PI * 2;
+      var s = (0.35 + Math.random() * 0.65) * (power || 190);
+      sparks.push({ x: x, y: y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 0.4 + Math.random() * 0.4, age: 0, c: colour });
+    }
+  }
+
+  function ring(x, y, colour) {
+    if (reduce) return;
+    rings.push({ x: x, y: y, r: 12, age: 0, life: 0.5, c: colour });
+  }
+
+  /* ---------- game flow ---------- */
+  function reset() {
+    pins = []; sparks = []; rings = []; trail = [];
+    score = 0; idle = 0; shake = 0;
+    camX = 0; camTarget = 0;
+    held = null;
+    addPin();
+    grow();
+
+    // start off the line, flying at the first pin — holding to catch it teaches the verb
+    var first = pins[0];
+    comet.x = first.x - Math.min(W * 0.3, 260);
+    comet.y = first.y;
+    comet.vx = speed();
+    comet.vy = 0;
+    camX = camTarget = comet.x - W * 0.36;
+    elScore.textContent = "0";
+    elMeter.style.transform = "scaleX(1)";
+  }
+
+  function start() {
+    reset();
+    state = "play";
+    gate.hidden = true;
+    elLive.textContent = "Go. Hold to catch a pin, let go to fly.";
+  }
+
+  function over() {
+    state = "over";
+    overIn = 0.55;
+    held = null;
+    shake = reduce ? 0 : 14;
+    drop();
+    spark(comet.x, comet.y, 26, CRIMSON, 260);
+
+    if (score > best) { best = score; saveBest(); elBest.textContent = best; }
+
+    elEyebrow.textContent = score >= best && score > 0 ? "New best" : "Line lost";
+    elRules.hidden = true;
+    elFinal.hidden = false;
+    elFScore.textContent = score;
+    elFBest.textContent = best;
+    btnStart.textContent = "Again";
+    gate.hidden = false;
+    elLive.textContent = "Line lost at " + score + " pins. Best " + best + ".";
+  }
+
+  function latch(pin, silent) {
+    var dx = comet.x - pin.x, dy = comet.y - pin.y;
+    var d = Math.hypot(dx, dy) || 1;
+    var r = Math.max(MIN_ORBIT, Math.min(d, reach()));
+
+    held = pin;
+    orbit.r = r;
+    orbit.a = Math.atan2(dy, dx);
+    // keep swinging the way we were already travelling
+    var cross = dx * comet.vy - dy * comet.vx;
+    orbit.dir = cross >= 0 ? 1 : -1;
+
+    comet.x = pin.x + Math.cos(orbit.a) * r;
+    comet.y = pin.y + Math.sin(orbit.a) * r;
+    pin.pulse = 1;
+    idle = 0;
+
+    if (!pin.used) {
+      pin.used = true;
+      if (!silent) {
+        score++;
+        elScore.textContent = score;
+        note(Math.min(score, NOTES.length - 1), "triangle", 0.05);
+        ring(pin.x, pin.y, GOLD);
+      }
+    }
+  }
+
+  function release() {
+    if (!held) return;
+    var tx = -Math.sin(orbit.a) * orbit.dir;
+    var ty = Math.cos(orbit.a) * orbit.dir;
+    var v = speed();
+    comet.vx = tx * v;
+    comet.vy = ty * v;
+    spark(comet.x, comet.y, 7, EMBER, 130);
+    held.lock = 0.4;   // a quick re-press shouldn't snap you back onto the pin you just left
+    held = null;
+    idle = 0;
+  }
+
+  function burnOut(pin) {
+    pin.alive = false;
+    release();
+    ring(pin.x, pin.y, CRIMSON);
+    spark(pin.x, pin.y, 12, CRIMSON, 150);
+    note(1, "square", 0.04);
+  }
+
+  /* ---------- input ---------- */
+  function press() {
+    if (state === "idle") { start(); return; }
+    if (state === "over") { if (overIn <= 0) start(); return; }
+    hold = true;
+  }
+
+  function lift() { hold = false; }
+
+  canvas.addEventListener("pointerdown", function (e) { e.preventDefault(); press(); });
+  window.addEventListener("pointerup", lift);
+  window.addEventListener("pointercancel", lift);
+
+  window.addEventListener("keydown", function (e) {
+    if (e.code !== "Space" && e.key !== " ") return;
+    e.preventDefault();
+    if (e.repeat) return;
+    press();
+  });
+
+  window.addEventListener("keyup", function (e) {
+    if (e.code === "Space" || e.key === " ") lift();
+  });
+
+  btnStart.addEventListener("click", function (e) {
+    e.stopPropagation();
+    if (state === "over" && overIn > 0) return;
+    start();
+  });
+
+  /* ---------- step ---------- */
+  function step(dt) {
+    grow();
+
+    for (var i = 0; i < pins.length; i++) {
+      var p = pins[i];
+      if (p.amp) {
+        p.phase += p.freq * dt;
+        p.y = p.base + Math.sin(p.phase) * p.amp;
+      }
+      if (p.pulse > 0) p.pulse = Math.max(0, p.pulse - dt * 2.6);
+      if (p.lock > 0) p.lock = Math.max(0, p.lock - dt);
+    }
+
+    if (held && !hold) release();
+
+    if (held) {
+      var turn = (speed() / orbit.r) * dt;
+      held.charge -= turn / (Math.PI * 2 * burn());
+      if (held.charge <= 0) {
+        burnOut(held);
+      } else {
+        orbit.a += turn * orbit.dir;
+        comet.x = held.x + Math.cos(orbit.a) * orbit.r;
+        comet.y = held.y + Math.sin(orbit.a) * orbit.r;
+        var t = speed();
+        comet.vx = -Math.sin(orbit.a) * orbit.dir * t;
+        comet.vy = Math.cos(orbit.a) * orbit.dir * t;
+      }
+    }
+
+    if (!held) {
+      comet.x += comet.vx * dt;
+      comet.y += comet.vy * dt;
+      idle += dt;
+
+      if (hold) {
+        var bestPin = null, bestD = Infinity;
+        for (var j = 0; j < pins.length; j++) {
+          var q = pins[j];
+          if (!q.alive || q.lock > 0) continue;
+          var d = Math.hypot(comet.x - q.x, comet.y - q.y);
+          if (d < reach() && d < bestD) { bestD = d; bestPin = q; }
+        }
+        if (bestPin) latch(bestPin);
+      }
+    }
+
+    trail.push({ x: comet.x, y: comet.y });
+    if (trail.length > TRAIL) trail.shift();
+
+    camTarget = comet.x - W * 0.36;
+    camX += (camTarget - camX) * Math.min(1, dt * 4.5);
+
+    for (var s = sparks.length - 1; s >= 0; s--) {
+      var sp = sparks[s];
+      sp.age += dt;
+      sp.x += sp.vx * dt; sp.y += sp.vy * dt;
+      sp.vx *= 0.94; sp.vy *= 0.94;
+      if (sp.age >= sp.life) sparks.splice(s, 1);
+    }
+
+    for (var r = rings.length - 1; r >= 0; r--) {
+      var rg = rings[r];
+      rg.age += dt;
+      rg.r += dt * 190;
+      if (rg.age >= rg.life) rings.splice(r, 1);
+    }
+
+    if (shake > 0) shake = Math.max(0, shake - dt * 34);
+
+    var meter = Math.max(0, 1 - idle / LOST_AFTER);
+    elMeter.style.transform = "scaleX(" + meter.toFixed(3) + ")";
+    elMeter.style.background = meter < 0.35 ? CRIMSON : GOLD;
+
+    if (comet.y < -60 || comet.y > H + 60 || comet.x < camX - 90 || idle > LOST_AFTER) over();
+  }
+
+  /* ---------- draw ---------- */
+  function backdrop() {
+    ctx.fillStyle = PITCH;
+    ctx.fillRect(0, 0, W, H);
+
+    // slow parallax marks so the speed reads
+    var band = 190;
+    var startX = Math.floor((camX * 0.35) / band) * band;
+    ctx.strokeStyle = "rgba(255, 242, 230, 0.05)";
+    ctx.lineWidth = 1;
+    for (var i = -1; i < W / band + 2; i++) {
+      var x = startX + i * band - camX * 0.35;
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, H);
+      ctx.stroke();
+    }
+  }
+
+  function drawPin(p) {
+    var x = p.x - camX, y = p.y;
+    if (x < -80 || x > W + 80) return;
+
+    var live = p.alive;
+    var main = live ? (p.used ? GOLD : EMBER) : "rgba(255, 56, 100, 0.34)";
+
+    if (live) {
+      ctx.strokeStyle = "rgba(255, 242, 230, 0.13)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(x, y, reach(), 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    if (p.pulse > 0) {
+      ctx.strokeStyle = "rgba(255, 209, 102, " + (p.pulse * 0.55).toFixed(3) + ")";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(x, y, PIN_R + 10 + (1 - p.pulse) * 20, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    ctx.fillStyle = main;
+    ctx.beginPath();
+    ctx.arc(x, y, PIN_R, 0, Math.PI * 2);
+    ctx.fill();
+
+    // charge arc: what's left of this pin
+    if (live && p.charge < 1) {
+      ctx.strokeStyle = CRIMSON;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(x, y, PIN_R + 7, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * p.charge);
+      ctx.stroke();
+    }
+  }
+
+  function drawComet() {
+    var x = comet.x - camX, y = comet.y;
+
+    for (var i = 1; i < trail.length; i++) {
+      var a = i / trail.length;
+      ctx.strokeStyle = "rgba(255, 122, 24, " + (a * 0.5).toFixed(3) + ")";
+      ctx.lineWidth = 1 + a * 4.5;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(trail[i - 1].x - camX, trail[i - 1].y);
+      ctx.lineTo(trail[i].x - camX, trail[i].y);
+      ctx.stroke();
+    }
+
+    ctx.fillStyle = CREAM;
+    ctx.beginPath();
+    ctx.arc(x, y, 7, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = "rgba(255, 209, 102, 0.28)";
+    ctx.beginPath();
+    ctx.arc(x, y, 15, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  function draw() {
+    ctx.save();
+    if (shake > 0) {
+      ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
+    }
+
+    backdrop();
+
+    for (var i = 0; i < pins.length; i++) drawPin(pins[i]);
+
+    if (held) {
+      var hx = held.x - camX, hy = held.y;
+      ctx.strokeStyle = "rgba(255, 209, 102, 0.16)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(hx, hy, orbit.r, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.strokeStyle = GOLD;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(hx, hy);
+      ctx.lineTo(comet.x - camX, comet.y);
+      ctx.stroke();
+    }
+
+    for (var r = 0; r < rings.length; r++) {
+      var rg = rings[r];
+      var fade = 1 - rg.age / rg.life;
+      ctx.strokeStyle = rg.c === CRIMSON
+        ? "rgba(255, 56, 100, " + (fade * 0.6).toFixed(3) + ")"
+        : "rgba(255, 209, 102, " + (fade * 0.6).toFixed(3) + ")";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(rg.x - camX, rg.y, rg.r, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    for (var s = 0; s < sparks.length; s++) {
+      var sp = sparks[s];
+      var f = 1 - sp.age / sp.life;
+      ctx.globalAlpha = Math.max(0, f);
+      ctx.fillStyle = sp.c;
+      ctx.beginPath();
+      ctx.arc(sp.x - camX, sp.y, 2.4 * f + 0.6, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    if (state !== "idle") drawComet();
+
+    // the line is running out — close in from the edges
+    if (state === "play" && idle > LOST_AFTER * 0.5) {
+      var warn = (idle - LOST_AFTER * 0.5) / (LOST_AFTER * 0.5);
+      var grad = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.24, W / 2, H / 2, Math.max(W, H) * 0.72);
+      grad.addColorStop(0, "rgba(255, 56, 100, 0)");
+      grad.addColorStop(1, "rgba(255, 56, 100, " + (warn * 0.5).toFixed(3) + ")");
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    ctx.restore();
+  }
+
+  /* ---------- loop ---------- */
+  var last = 0;
+
+  function frame(now) {
+    var dt = last ? Math.min((now - last) / 1000, 0.033) : 0;
+    last = now;
+
+    if (state === "play") step(dt);
+    if (state === "over" && overIn > 0) overIn = Math.max(0, overIn - dt);
+    if (state === "over" && shake > 0) shake = Math.max(0, shake - dt * 34);
+
+    draw();
+    requestAnimationFrame(frame);
+  }
+
+  // Opt-in read-only snapshot (…/slingline/?probe=1), used to tune difficulty with a
+  // scripted player. Absent from a normal page load.
+  if (window.location.search.indexOf("probe") !== -1) {
+    window.__slingline = function () {
+      return {
+        state: state, score: score, hold: hold, idle: idle, reach: reach(), speed: speed(),
+        comet: { x: comet.x, y: comet.y, vx: comet.vx, vy: comet.vy },
+        held: held ? { x: held.x, y: held.y, charge: held.charge } : null,
+        orbit: { r: orbit.r, a: orbit.a, dir: orbit.dir },
+        pins: pins.map(function (p) {
+          return { x: p.x, y: p.y, alive: p.alive, used: p.used };
+        })
+      };
+    };
+  }
+
+  // an idle attract state so the page isn't a dead rectangle before you start
+  reset();
+  state = "idle";
+  requestAnimationFrame(frame);
+})();
+</script>

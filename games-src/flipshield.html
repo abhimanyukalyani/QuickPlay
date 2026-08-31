@@ -1,0 +1,886 @@
+<title>Flipshield</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Chivo:wght@400;700;900&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+  :root {
+    --void: #06161B;
+    --void-deep: #030C0F;
+    --panel: rgba(6, 22, 27, 0.92);
+    --line: rgba(214, 244, 255, 0.14);
+    --text: #E9FBFF;
+    --dim: #6E93A0;
+    --pink: #FF2D6F;
+    --cyan: #26E0FF;
+    --amber: #FFB020;
+    --ghost: #EAF6FF;
+
+    --display: "Anton", "Haettenschweiler", "Arial Narrow", sans-serif;
+    --body: "Chivo", "Helvetica Neue", Arial, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body { height: 100%; }
+
+  body {
+    margin: 0;
+    background: var(--void-deep);
+    color: var(--text);
+    font-family: var(--body);
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  #field {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    touch-action: none;
+    cursor: crosshair;
+  }
+
+  .hud {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    padding: clamp(12px, 2.2vw, 26px);
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    grid-template-rows: auto 1fr auto;
+    gap: 10px;
+  }
+
+  .cell { display: flex; flex-direction: column; gap: 3px; }
+  .cell.right { align-items: flex-end; text-align: right; }
+  .cell.mid { align-items: center; text-align: center; }
+
+  .label {
+    font-family: var(--mono);
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--dim);
+  }
+
+  .value {
+    font-family: var(--display);
+    font-size: clamp(30px, 6vw, 52px);
+    line-height: 0.86;
+    letter-spacing: 0.01em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .value.small { font-size: clamp(18px, 3vw, 26px); }
+
+  #combo {
+    grid-column: 2;
+    grid-row: 1;
+    align-items: center;
+    transition: transform 90ms ease-out;
+  }
+
+  #combo .value { color: var(--amber); }
+  #combo[data-idle="1"] { opacity: 0.28; }
+
+  .lives { display: flex; gap: 6px; margin-top: 2px; }
+
+  .pip {
+    width: 13px; height: 15px;
+    background: var(--cyan);
+    clip-path: polygon(50% 0, 100% 26%, 100% 74%, 50% 100%, 0 74%, 0 26%);
+  }
+  .pip[data-off="1"] { background: rgba(214, 244, 255, 0.16); }
+
+  .foot {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 14px;
+  }
+
+  .keys {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--dim);
+    max-width: 46ch;
+  }
+
+  .keys b { color: var(--text); font-weight: 700; }
+
+  .keys kbd {
+    font-family: var(--mono);
+    font-size: 10px;
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    padding: 1px 5px;
+    color: var(--text);
+  }
+
+  button {
+    pointer-events: auto;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    background: transparent;
+    color: var(--text);
+    padding: 9px 14px;
+    cursor: pointer;
+    transition: background 120ms ease, border-color 120ms ease;
+  }
+
+  button:hover { background: rgba(233, 251, 255, 0.08); border-color: var(--dim); }
+  button:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+
+  .go {
+    background: var(--pink);
+    border-color: var(--pink);
+    color: #14030A;
+    font-size: 12.5px;
+    padding: 13px 30px;
+    letter-spacing: 0.18em;
+  }
+  .go:hover { background: #ff5288; border-color: #ff5288; color: #14030A; }
+
+  /* ---------- gate ---------- */
+  .gate {
+    position: fixed;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: 22px;
+    background: radial-gradient(circle at 50% 45%, rgba(6, 22, 27, 0.86), rgba(3, 12, 15, 0.97));
+    z-index: 5;
+  }
+
+  .gate[hidden] { display: none; }
+
+  .card {
+    width: min(460px, 100%);
+    border: 1px solid var(--line);
+    background: var(--panel);
+    padding: clamp(24px, 4vw, 36px);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    align-items: flex-start;
+  }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 9.5px;
+    font-weight: 600;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--amber);
+    margin: 0;
+  }
+
+  .card h1 {
+    margin: 0;
+    font-family: var(--display);
+    font-size: clamp(46px, 11vw, 84px);
+    line-height: 0.82;
+    letter-spacing: 0.005em;
+    text-transform: uppercase;
+  }
+
+  .card h1 i { font-style: normal; color: var(--pink); }
+
+  .rules { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 9px; }
+
+  .rules li {
+    display: grid;
+    grid-template-columns: 14px 1fr;
+    gap: 11px;
+    align-items: start;
+    font-size: 14px;
+    line-height: 1.45;
+    color: #BFDDE6;
+  }
+
+  .rules b { color: var(--text); font-weight: 700; }
+
+  .dot { width: 12px; height: 12px; border-radius: 50%; margin-top: 4px; }
+  .dot.p { background: var(--pink); }
+  .dot.c { background: var(--cyan); }
+  .dot.g { border: 2px dashed var(--ghost); background: transparent; }
+
+  .final {
+    display: flex;
+    gap: 26px;
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+  }
+  .final div { display: flex; flex-direction: column; gap: 2px; }
+  .final em { font-style: normal; font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--dim); }
+  .final span { font-family: var(--display); font-size: 30px; line-height: 1; }
+
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+  @media (max-width: 560px) {
+    .keys { font-size: 11px; }
+    .value { font-size: 30px; }
+  }
+</style>
+
+<canvas id="field" aria-label="Flipshield playing field"></canvas>
+
+<div class="hud">
+  <div class="cell">
+    <p class="label">Score</p>
+    <p class="value" id="score">0</p>
+  </div>
+
+  <div class="cell mid" id="combo" data-idle="1">
+    <p class="label">Combo</p>
+    <p class="value" id="mult">×1</p>
+  </div>
+
+  <div class="cell right">
+    <p class="label">Best <span id="best">0</span></p>
+    <div class="lives" id="lives" aria-label="Lives"></div>
+  </div>
+
+  <div class="foot">
+    <p class="keys">Aim with the <b>mouse</b> or <kbd>←</kbd> <kbd>→</kbd>. <b>Click</b> or <kbd>Space</kbd> flips the shield's colour. Match the incoming orb — and never touch the white ones.</p>
+    <button type="button" id="mute" aria-pressed="true">Sound on</button>
+  </div>
+</div>
+
+<div class="gate" id="gate">
+  <div class="card" id="card">
+    <p class="eyebrow" id="eyebrow">Reflex · endless</p>
+    <h1 id="title">Flip<i>shield</i></h1>
+    <ul class="rules" id="rules">
+      <li><i class="dot p"></i><span>Orbs converge on the core. Put the shield in the way with the <b>matching colour</b>.</span></li>
+      <li><i class="dot c"></i><span><b>Click or Space</b> flips the shield between pink and cyan. Wrong colour costs a life.</span></li>
+      <li><i class="dot g"></i><span>White ghosts pass straight through the core. Block one and it burns you — <b>get out of the way</b>.</span></li>
+    </ul>
+    <div class="final" id="final" hidden>
+      <div><em>Score</em><span id="f-score">0</span></div>
+      <div><em>Best combo</em><span id="f-combo">0</span></div>
+      <div><em>Survived</em><span id="f-time">0s</span></div>
+    </div>
+    <button class="go" id="start" type="button">Start</button>
+  </div>
+</div>
+
+<p class="sr" id="live" role="status" aria-live="polite"></p>
+
+<script>
+(function () {
+  "use strict";
+
+  var PINK = "#FF2D6F", CYAN = "#26E0FF", GHOST = "#EAF6FF", AMBER = "#FFB020";
+  var VOID = "#06161B";
+
+  var R_SHIELD = 118;        // shield radius
+  var ARC = 0.46;            // shield half-angle (radians)
+  var THICK = 15;
+  var CORE_R = 26;
+  var ORB_R = 9;
+
+  var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  var canvas = document.getElementById("field");
+  var ctx = canvas.getContext("2d");
+  var gate = document.getElementById("gate");
+  var elScore = document.getElementById("score");
+  var elMult = document.getElementById("mult");
+  var elCombo = document.getElementById("combo");
+  var elBest = document.getElementById("best");
+  var elLives = document.getElementById("lives");
+  var elLive = document.getElementById("live");
+  var btnMute = document.getElementById("mute");
+
+  var W = 0, H = 0, cx = 0, cy = 0, dpr = 1, scale = 1;
+
+  var state = "idle";        // idle | play | over
+  var orbs = [], bits = [], rings = [];
+  var angle = -Math.PI / 2, targetAngle = -Math.PI / 2, keyDir = 0;
+  var colorOn = 0;           // 0 pink, 1 cyan
+  var flipFlash = 0;
+  var score = 0, combo = 0, bestCombo = 0, lives = 3, elapsed = 0, best = 0;
+  var nextLifeAt = 1200, MAX_LIVES = 5;
+  var spawnTimer = 0, shake = 0, hurt = 0, pulse = 0, banner = 0, flash = 0, flashCol = "#FFFFFF";
+  var soundOn = true, audio = null;
+
+  var SCALE = [329.63, 392.0, 440.0, 493.88, 587.33, 659.25, 783.99, 880.0, 987.77, 1174.66];
+
+  /* ---------- storage ---------- */
+  try {
+    var stored = parseInt(window.localStorage.getItem("flipshield.best"), 10);
+    if (stored > 0) best = stored;
+  } catch (e) {}
+  elBest.textContent = best;
+
+  function saveBest() {
+    try { window.localStorage.setItem("flipshield.best", String(best)); } catch (e) {}
+  }
+
+  /* ---------- audio ---------- */
+  function ac() {
+    if (!audio) {
+      var C = window.AudioContext || window.webkitAudioContext;
+      if (!C) return null;
+      audio = new C();
+    }
+    if (audio.state === "suspended") audio.resume();
+    return audio;
+  }
+
+  function blip(step) {
+    if (!soundOn) return;
+    try {
+      var a = ac(); if (!a) return;
+      var t = a.currentTime;
+      var o = a.createOscillator(), g = a.createGain();
+      o.type = "square";
+      o.frequency.setValueAtTime(SCALE[Math.min(step, SCALE.length - 1)], t);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.055, t + 0.008);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
+      o.connect(g); g.connect(a.destination);
+      o.start(t); o.stop(t + 0.18);
+    } catch (e) {}
+  }
+
+  function thud() {
+    if (!soundOn) return;
+    try {
+      var a = ac(); if (!a) return;
+      var t = a.currentTime;
+      var o = a.createOscillator(), g = a.createGain();
+      o.type = "sawtooth";
+      o.frequency.setValueAtTime(180, t);
+      o.frequency.exponentialRampToValueAtTime(48, t + 0.34);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.16, t + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.40);
+      o.connect(g); g.connect(a.destination);
+      o.start(t); o.stop(t + 0.42);
+    } catch (e) {}
+  }
+
+  function tick() {
+    if (!soundOn) return;
+    try {
+      var a = ac(); if (!a) return;
+      var t = a.currentTime;
+      var o = a.createOscillator(), g = a.createGain();
+      o.type = "triangle";
+      o.frequency.setValueAtTime(1400, t);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.022, t + 0.004);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.05);
+      o.connect(g); g.connect(a.destination);
+      o.start(t); o.stop(t + 0.06);
+    } catch (e) {}
+  }
+
+  /* ---------- sizing ---------- */
+  function resize() {
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    W = window.innerWidth;
+    H = window.innerHeight;
+    canvas.width = Math.round(W * dpr);
+    canvas.height = Math.round(H * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    cx = W / 2;
+    cy = H / 2;
+    scale = Math.min(1, Math.min(W, H) / 620);
+    if (scale < 0.62) scale = 0.62;
+  }
+
+  function rs() { return R_SHIELD * scale; }
+  function rc() { return CORE_R * scale; }
+  function ro() { return ORB_R * scale; }
+
+  /* ---------- game flow ---------- */
+  function reset() {
+    orbs = []; bits = []; rings = [];
+    score = 0; combo = 0; bestCombo = 0; lives = 3; elapsed = 0;
+    nextLifeAt = 1200;
+    spawnTimer = 0.5; shake = 0; hurt = 0; banner = 0;
+    colorOn = 0; flipFlash = 0;
+    angle = targetAngle = -Math.PI / 2;
+    paintHud();
+  }
+
+  function begin() {
+    reset();
+    state = "play";
+    gate.hidden = true;
+    ac();
+    say("Game started.");
+  }
+
+  function pause() {
+    if (state !== "play") return;
+    state = "paused";
+    document.getElementById("eyebrow").textContent = "Holding";
+    document.getElementById("title").innerHTML = "Pau<i>sed</i>";
+    document.getElementById("rules").hidden = true;
+    document.getElementById("final").hidden = true;
+    document.getElementById("start").textContent = "Resume";
+    gate.hidden = false;
+  }
+
+  function over() {
+    state = "over";
+    var beaten = score > best;
+    if (beaten) { best = score; saveBest(); elBest.textContent = best; }
+    document.getElementById("eyebrow").textContent = beaten ? "New best" : "Core breached";
+    document.getElementById("title").innerHTML = beaten ? "Top<i>score</i>" : "Down<i>ed</i>";
+    document.getElementById("rules").hidden = true;
+    document.getElementById("final").hidden = false;
+    document.getElementById("f-score").textContent = score;
+    document.getElementById("f-combo").textContent = bestCombo;
+    document.getElementById("f-time").textContent = Math.round(elapsed) + "s";
+    document.getElementById("start").textContent = "Again";
+    gate.hidden = false;
+    document.getElementById("start").focus();
+    say("Game over. Score " + score + ".");
+  }
+
+  function say(m) { elLive.textContent = m; }
+
+  function paintHud() {
+    elScore.textContent = score;
+    var m = mult();
+    elMult.textContent = "×" + m;
+    elCombo.dataset.idle = combo >= 3 ? "0" : "1";
+    elCombo.style.transform = "scale(" + (1 + Math.min(m - 1, 7) * 0.045) + ")";
+
+    var shown = Math.max(3, lives);
+    while (elLives.children.length < shown) {
+      var pip = document.createElement("i");
+      pip.className = "pip";
+      elLives.appendChild(pip);
+    }
+    while (elLives.children.length > shown) elLives.removeChild(elLives.lastChild);
+    for (var i = 0; i < elLives.children.length; i++) {
+      elLives.children[i].dataset.off = i < lives ? "0" : "1";
+    }
+  }
+
+  function mult() { return Math.min(8, 1 + Math.floor(combo / 4)); }
+
+  /* ---------- input ---------- */
+  var dragging = false, moved = false;
+
+  function aimAt(px, py) {
+    var dx = px - cx, dy = py - cy;
+    if (dx * dx + dy * dy < 36) return;
+    targetAngle = Math.atan2(dy, dx);
+  }
+
+  canvas.addEventListener("pointermove", function (e) {
+    if (e.pointerType === "mouse") { aimAt(e.clientX, e.clientY); return; }
+    if (dragging) { moved = true; aimAt(e.clientX, e.clientY); }
+  });
+
+  canvas.addEventListener("pointerdown", function (e) {
+    if (e.pointerType !== "mouse") { dragging = true; moved = false; aimAt(e.clientX, e.clientY); }
+  });
+
+  canvas.addEventListener("pointerup", function (e) {
+    if (e.pointerType === "mouse") { flip(); return; }
+    dragging = false;
+    if (!moved) flip();
+  });
+
+  canvas.addEventListener("pointercancel", function () { dragging = false; });
+
+  function flip() {
+    if (state !== "play") return;
+    colorOn = colorOn ? 0 : 1;
+    flipFlash = 1;
+    tick();
+  }
+
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") { keyDir = -1; }
+    else if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") { keyDir = 1; }
+    else if (e.key === " " || e.key === "Spacebar") {
+      e.preventDefault();
+      if (state === "play") flip(); else document.getElementById("start").click();
+    } else if (e.key === "Enter" && state !== "play") {
+      document.getElementById("start").click();
+    }
+  });
+
+  document.addEventListener("keyup", function (e) {
+    if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") { if (keyDir === -1) keyDir = 0; }
+    if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") { if (keyDir === 1) keyDir = 0; }
+  });
+
+  document.getElementById("start").addEventListener("click", function () {
+    if (state === "paused") {
+      state = "play";
+      gate.hidden = true;
+      last = performance.now();
+      return;
+    }
+    document.getElementById("rules").hidden = false;
+    document.getElementById("final").hidden = true;
+    document.getElementById("start").textContent = "Start";
+    begin();
+  });
+
+  btnMute.addEventListener("click", function () {
+    soundOn = !soundOn;
+    btnMute.textContent = soundOn ? "Sound on" : "Sound off";
+    btnMute.setAttribute("aria-pressed", soundOn ? "true" : "false");
+    if (soundOn) tick();
+  });
+
+  document.addEventListener("visibilitychange", function () {
+    if (document.hidden) pause();
+  });
+
+  window.addEventListener("blur", pause);
+
+  /* ---------- spawning ---------- */
+  function spawnOrb() {
+    var a = Math.random() * Math.PI * 2;
+    var dist = Math.min(W, H) * 0.60 + 30;
+    var ghostChance = elapsed < 16 ? 0 : Math.min(0.18, (elapsed - 16) * 0.004);
+    var isGhost = Math.random() < ghostChance;
+    var speed = Math.min(285, 104 + elapsed * 1.9) * scale;
+    orbs.push({
+      x: cx + Math.cos(a) * dist,
+      y: cy + Math.sin(a) * dist,
+      a: a,
+      speed: speed,
+      ghost: isGhost,
+      color: isGhost ? 0 : (Math.random() < 0.5 ? 0 : 1),
+      prev: dist,
+      age: 0
+    });
+  }
+
+  function spawnRate() {
+    return Math.max(0.36, 1.25 - elapsed * 0.010);
+  }
+
+  /* ---------- effects ---------- */
+  function burst(x, y, color, n) {
+    if (reduce) n = Math.min(n, 4);
+    for (var i = 0; i < n; i++) {
+      var a = Math.random() * Math.PI * 2;
+      var s = (40 + Math.random() * 210) * scale;
+      bits.push({ x: x, y: y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 0.45 + Math.random() * 0.35, t: 0, color: color });
+    }
+  }
+
+  function ring(x, y, color, max) {
+    rings.push({ x: x, y: y, color: color, t: 0, max: max });
+  }
+
+  /* ---------- step ---------- */
+  function step(dt) {
+    elapsed += dt;
+    pulse += dt;
+
+    if (keyDir !== 0) targetAngle += keyDir * 4.6 * dt;
+
+    var diff = targetAngle - angle;
+    while (diff > Math.PI) diff -= Math.PI * 2;
+    while (diff < -Math.PI) diff += Math.PI * 2;
+    angle += diff * Math.min(1, dt * 22);
+
+    flipFlash = Math.max(0, flipFlash - dt * 4);
+    flash = Math.max(0, flash - dt * 5);
+    shake = Math.max(0, shake - dt * 3.2);
+    hurt = Math.max(0, hurt - dt * 2);
+
+    banner = Math.max(0, banner - dt);
+
+    spawnTimer -= dt;
+    if (spawnTimer <= 0) {
+      spawnOrb();
+      if (elapsed > 40 && Math.random() < 0.22) spawnOrb();
+      if (elapsed > 75 && Math.random() < 0.18) spawnOrb();
+      spawnTimer = spawnRate();
+    }
+
+    var band = rs();
+    for (var i = orbs.length - 1; i >= 0; i--) {
+      var o = orbs[i];
+      o.age += dt;
+      o.x -= Math.cos(o.a) * o.speed * dt;
+      o.y -= Math.sin(o.a) * o.speed * dt;
+      var dx = o.x - cx, dy = o.y - cy;
+      var d = Math.sqrt(dx * dx + dy * dy);
+
+      // crossing the shield band this frame?
+      if (o.prev > band && d <= band) {
+        var oa = Math.atan2(dy, dx);
+        var da = oa - angle;
+        while (da > Math.PI) da -= Math.PI * 2;
+        while (da < -Math.PI) da += Math.PI * 2;
+        if (Math.abs(da) <= ARC) {
+          if (o.ghost) {
+            damage(o.x, o.y, GHOST);
+            orbs.splice(i, 1);
+            continue;
+          }
+          if (o.color === colorOn) {
+            var col = o.color ? CYAN : PINK;
+            combo++;
+            if (combo > bestCombo) bestCombo = combo;
+            score += 10 * mult();
+            burst(o.x, o.y, col, 14);
+            ring(o.x, o.y, col, 46 * scale);
+            if (!reduce) { flash = Math.min(0.34, 0.05 + mult() * 0.035); flashCol = col; }
+            blip(Math.min(9, Math.floor(combo / 3)));
+            shake = Math.min(shake + 0.18, 1);
+            if (score >= nextLifeAt) {
+              nextLifeAt += 1400;
+              if (lives < MAX_LIVES) {
+                lives++;
+                banner = 1.6;
+                ring(cx, cy, AMBER, rs() * 1.6);
+                blip(9);
+              }
+            }
+            paintHud();
+            orbs.splice(i, 1);
+            continue;
+          }
+          damage(o.x, o.y, o.color ? CYAN : PINK);
+          orbs.splice(i, 1);
+          continue;
+        }
+      }
+
+      o.prev = d;
+
+      if (d <= rc()) {
+        if (o.ghost) { orbs.splice(i, 1); continue; }
+        damage(cx + dx * 0.6, cy + dy * 0.6, o.color ? CYAN : PINK);
+        orbs.splice(i, 1);
+        continue;
+      }
+
+      if (d > Math.max(W, H) * 1.4) orbs.splice(i, 1);
+    }
+
+    for (var b = bits.length - 1; b >= 0; b--) {
+      var p = bits[b];
+      p.t += dt;
+      if (p.t >= p.life) { bits.splice(b, 1); continue; }
+      p.x += p.vx * dt; p.y += p.vy * dt;
+      p.vx *= 0.94; p.vy *= 0.94;
+    }
+
+    for (var r = rings.length - 1; r >= 0; r--) {
+      rings[r].t += dt;
+      if (rings[r].t > 0.42) rings.splice(r, 1);
+    }
+  }
+
+  function damage(x, y, color) {
+    lives--;
+    combo = 0;
+    burst(x, y, color, 22);
+    ring(cx, cy, "#FF3B3B", rs() * 1.4);
+    shake = 1;
+    hurt = 1;
+    thud();
+    paintHud();
+    if (lives <= 0) over();
+  }
+
+  /* ---------- draw ---------- */
+  function draw() {
+    ctx.save();
+    if (shake > 0 && !reduce) {
+      ctx.translate((Math.random() - 0.5) * 14 * shake, (Math.random() - 0.5) * 14 * shake);
+    }
+
+    ctx.fillStyle = VOID;
+    ctx.fillRect(-20, -20, W + 40, H + 40);
+
+    var live = colorOn ? CYAN : PINK;
+    var heat = Math.min(1, (mult() - 1) / 7);
+
+    // core glow, hotter with the multiplier
+    var glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, rs() * 2.2);
+    glow.addColorStop(0, rgba(live, 0.05 + heat * 0.13));
+    glow.addColorStop(1, rgba(live, 0));
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, W, H);
+
+    // ambient rings breathing out of the core
+    var speed = 0.45 + heat * 0.7;
+    var beat = reduce ? 0.5 : (pulse * speed) % 1;
+    for (var k = 0; k < 3; k++) {
+      var p = (beat + k / 3) % 1;
+      ctx.beginPath();
+      ctx.arc(cx, cy, rs() * (0.3 + p * 2.6), 0, Math.PI * 2);
+      ctx.strokeStyle = rgba(live, (0.10 + heat * 0.10) * (1 - p));
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+
+    // shield track
+    ctx.beginPath();
+    ctx.arc(cx, cy, rs(), 0, Math.PI * 2);
+    ctx.strokeStyle = "rgba(233, 251, 255, 0.07)";
+    ctx.lineWidth = THICK * scale;
+    ctx.stroke();
+
+    // orbs
+    for (var i = 0; i < orbs.length; i++) {
+      var o = orbs[i];
+      var col = o.ghost ? GHOST : (o.color ? CYAN : PINK);
+      var fade = Math.min(1, o.age / 0.25);
+      ctx.globalAlpha = fade;
+      var tx = o.x + Math.cos(o.a) * 26 * scale;
+      var ty = o.y + Math.sin(o.a) * 26 * scale;
+      var g = ctx.createLinearGradient(o.x, o.y, tx, ty);
+      g.addColorStop(0, rgba(col, 0.55));
+      g.addColorStop(1, rgba(col, 0));
+      ctx.strokeStyle = g;
+      ctx.lineWidth = ro() * 1.5;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(o.x, o.y);
+      ctx.lineTo(tx, ty);
+      ctx.stroke();
+
+      if (o.ghost) {
+        ctx.beginPath();
+        ctx.arc(o.x, o.y, ro() * 1.15, 0, Math.PI * 2);
+        ctx.setLineDash([4, 4]);
+        ctx.strokeStyle = GHOST;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.setLineDash([]);
+      } else {
+        ctx.beginPath();
+        ctx.arc(o.x, o.y, ro(), 0, Math.PI * 2);
+        ctx.fillStyle = col;
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(o.x, o.y, ro() + 4 * scale, 0, Math.PI * 2);
+        ctx.strokeStyle = rgba(col, 0.3);
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    // rings
+    for (var r = 0; r < rings.length; r++) {
+      var rg = rings[r];
+      var pr = rg.t / 0.42;
+      ctx.beginPath();
+      ctx.arc(rg.x, rg.y, rg.max * pr, 0, Math.PI * 2);
+      ctx.strokeStyle = rgba(rg.color, 0.7 * (1 - pr));
+      ctx.lineWidth = 3 * (1 - pr) + 0.5;
+      ctx.stroke();
+    }
+
+    // particles
+    for (var b = 0; b < bits.length; b++) {
+      var p = bits[b];
+      var a = 1 - p.t / p.life;
+      ctx.fillStyle = rgba(p.color, a);
+      ctx.fillRect(p.x - 1.5, p.y - 1.5, 3.5, 3.5);
+    }
+
+    // shield
+    var shieldColor = colorOn ? CYAN : PINK;
+    ctx.beginPath();
+    ctx.arc(cx, cy, rs(), angle - ARC, angle + ARC);
+    ctx.strokeStyle = shieldColor;
+    ctx.lineWidth = THICK * scale;
+    ctx.lineCap = "butt";
+    ctx.stroke();
+
+    if (flipFlash > 0) {
+      ctx.beginPath();
+      ctx.arc(cx, cy, rs(), angle - ARC, angle + ARC);
+      ctx.strokeStyle = rgba("#FFFFFF", flipFlash * 0.8);
+      ctx.lineWidth = THICK * scale + 6 * flipFlash;
+      ctx.stroke();
+    }
+
+    // core
+    ctx.beginPath();
+    ctx.arc(cx, cy, rc(), 0, Math.PI * 2);
+    ctx.fillStyle = rgba(shieldColor, 0.16);
+    ctx.fill();
+    ctx.strokeStyle = shieldColor;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(cx, cy, rc() * 0.34, 0, Math.PI * 2);
+    ctx.fillStyle = shieldColor;
+    ctx.fill();
+
+    if (banner > 0) {
+      ctx.globalAlpha = Math.min(1, banner);
+      ctx.fillStyle = AMBER;
+      ctx.font = '600 13px "IBM Plex Mono", ui-monospace, monospace';
+      ctx.textAlign = "center";
+      ctx.fillText("+1 SHIELD", cx, cy + rs() + 44 * scale);
+      ctx.globalAlpha = 1;
+    }
+
+    ctx.restore();
+
+    if (flash > 0.005) {
+      ctx.fillStyle = rgba(flashCol, flash * 0.5);
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    // damage vignette + last-life warning
+    var warn = (state === "play" && lives === 1) ? 0.22 + Math.sin(pulse * 6) * 0.06 : 0;
+    var v = Math.max(hurt * 0.55, warn);
+    if (v > 0.01) {
+      var vg = ctx.createRadialGradient(cx, cy, Math.min(W, H) * 0.22, cx, cy, Math.max(W, H) * 0.7);
+      vg.addColorStop(0, "rgba(255,45,80,0)");
+      vg.addColorStop(1, "rgba(255,45,80," + v + ")");
+      ctx.fillStyle = vg;
+      ctx.fillRect(0, 0, W, H);
+    }
+  }
+
+  function rgba(hex, a) {
+    var n = parseInt(hex.slice(1), 16);
+    return "rgba(" + ((n >> 16) & 255) + "," + ((n >> 8) & 255) + "," + (n & 255) + "," + a + ")";
+  }
+
+  /* ---------- loop ---------- */
+  resize();
+  window.addEventListener("resize", resize);
+  paintHud();
+
+  var last = performance.now();
+  function frame(now) {
+    var dt = Math.min((now - last) / 1000, 0.045);
+    last = now;
+    if (state === "play") step(dt);
+    else pulse += dt;
+    draw();
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>

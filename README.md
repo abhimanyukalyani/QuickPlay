@@ -7,15 +7,17 @@ Live games:
 
 | Game | Route | Source |
 | --- | --- | --- |
-| Flipshield | `/games/flipshield/` | `public/games/flipshield/index.html` |
-| Chain Bloom | `/games/chain-bloom/` | `public/games/chain-bloom/index.html` |
+| Flipshield | `/games/flipshield/` | `games-src/flipshield.html` |
+| Chain Bloom | `/games/chain-bloom/` | `games-src/chain-bloom.html` |
+| Slingline | `/games/slingline/` | `games-src/slingline.html` |
 
 ## Running it
 
 ```bash
 npm install
 npm run dev          # http://localhost:3000
-npm run build        # static export into out/
+npm run games        # regenerate the game pages from games-src/
+npm run build        # runs games, then a static export into out/
 npm run serve        # serve the built site at http://localhost:3000
 ```
 
@@ -30,29 +32,33 @@ app/                 site shell: layout (nav/footer), home page, sitemap, robots
 lib/games.ts         the game registry — home grid and sitemap both read from it
 lib/site.ts          site name, canonical URL, analytics/ads config from env
 components/          ad slot
-public/games/<slug>/ each game, as a standalone HTML document
+games-src/<slug>.html   each game's source: <style>, markup and <script>, no document shell
+public/games/<slug>/    the built game page (generated — edit games-src/ instead)
 public/thumbs/       gameplay stills used on the home-page cards
 public/og/           1200x630 share images used in og:image tags
 scripts/             the tooling below
 ```
 
 Game pages are deliberately *not* React routes. Each is a complete HTML document with its
-own CSS/JS, dropped in `public/` and served verbatim — so a working game can never be
-broken by a site-side change, and each page carries its own `<title>`, description,
-canonical link and OG tags.
+own CSS/JS, served verbatim from `public/` — so a working game can never be broken by a
+site-side change. `npm run games` (which `npm run build` runs first) wraps each source in
+that document, adding the `<title>`, description, canonical link and OG tags from
+`lib/games.ts` and the current `NEXT_PUBLIC_SITE_URL`. That means changing the site's URL
+is a rebuild, not a hand-edit of three files.
 
 ## Adding a game
 
 1. Append an entry to `games` in `lib/games.ts` (slug, title, tagline, description,
    tags, accent colours). Everything else keys off this.
-2. Import the game's HTML:
+2. Put the game's source at `games-src/<slug>.html` — a `<title>`, whatever `<link>` and
+   `<style>` it needs, then its markup and `<script>`, with no document shell. Write it
+   there directly, or, if it came from a Claude artifact, import the export:
    ```bash
-   node scripts/import-artifact-game.mjs path/to/game.html <slug>
+   node scripts/import-artifact-game.mjs path/to/artifact-export.html <slug>
    ```
-   This strips the artifact preview wrapper, rebuilds a proper document, injects the meta
-   and OG tags from `lib/games.ts`, and adds the floating "← QuickPlay" link. Games that
-   own the whole viewport may need a one-line entry in the script's `layoutFixups` so that
-   link doesn't overlap their HUD.
+   Then `npm run games`. Games that own the whole viewport may need a one-line entry in
+   `scripts/lib/game-page.mjs`'s `layoutFixups` so the floating "← QuickPlay" link doesn't
+   overlap their HUD.
 3. Generate the share image:
    ```bash
    node scripts/build-og-images.mjs
