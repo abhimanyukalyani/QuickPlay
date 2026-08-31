@@ -85,8 +85,16 @@ Create → Pages → Connect to Git, then:
 | Framework preset | Next.js (Static HTML Export) |
 | Build command | `npm run build` |
 | Build output directory | `out` |
+| Production branch | `main` |
 
-It deploys to `<project>.pages.dev` until a custom domain is added.
+The production-branch dropdown defaults to the repository's default branch, so set it to
+`main` here even if the repository default is still something else — the deploy does not
+depend on the GitHub setting. Node comes from `.node-version` (22); Next 16 will not build
+on Cloudflare's older default.
+
+It deploys to `<project>.pages.dev` until a custom domain is added, and the build reads its
+own URL from Cloudflare's `CF_PAGES_URL`, so canonical tags, OG tags and `sitemap.xml` are
+correct on the first deploy without anything being configured.
 
 ## Configuration
 
@@ -94,16 +102,19 @@ All optional — the site builds and runs with none of them set.
 
 | Variable | Effect |
 | --- | --- |
-| `NEXT_PUBLIC_SITE_URL` | Canonical/OG/sitemap base URL. Set this as soon as the real URL exists (default: `https://quickplay.pages.dev`), then re-run the OG script and rebuild. |
+| `NEXT_PUBLIC_SITE_URL` | Canonical/OG/sitemap base URL. Only needed for a custom domain — on Cloudflare Pages the build derives `https://<project>.pages.dev` from `CF_PAGES_URL`, and outside Cloudflare it falls back to `https://quickplay.pages.dev`. |
 | `NEXT_PUBLIC_CF_BEACON_TOKEN` | Adds the Cloudflare Web Analytics beacon. Not needed on Cloudflare Pages — enabling Web Analytics on the project injects it into every page, including the static game pages. |
 | `NEXT_PUBLIC_ADSENSE_CLIENT` | AdSense publisher id (`ca-pub-…`). Until it is set, `components/ad-slot.tsx` renders nothing, so no empty ad boxes appear during the AdSense review. |
 
 ## What still needs a human
 
-- Connect the repo to Cloudflare Pages and note the `.pages.dev` URL.
-- Set `NEXT_PUBLIC_SITE_URL` to that URL (or the real domain later) and redeploy.
+- Connect the repo to Cloudflare Pages (needs the Cloudflare account) with the settings above.
+- Switch the repository's default branch to `main` in GitHub → Settings → General. Not
+  required for the deploy, but PRs and clones still point at the planning branch until it
+  is changed.
 - Turn on Web Analytics for the Pages project.
-- Buy a domain when the site is worth pointing one at, then update the URL again.
+- Buy a domain when the site is worth pointing one at, then set `NEXT_PUBLIC_SITE_URL` to
+  it and redeploy.
 - Apply to Google AdSense once the site is live on its final domain; set
   `NEXT_PUBLIC_ADSENSE_CLIENT` after approval.
 - Submit `sitemap.xml` in Google Search Console.
