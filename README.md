@@ -117,8 +117,8 @@ One-time setup, done by hand in the Cloudflare dashboard — this repo has no ne
 
 1. **Storage & Databases → D1 → Create database**, name it `quickplay-scores`.
 2. Open its **Console** tab and run the contents of `migrations/0001_init.sql`.
-3. Copy the database's UUID into `wrangler.toml` at the repo root, replacing
-   `REPLACE_WITH_REAL_DATABASE_ID`, then commit and push.
+3. Copy the database's UUID into `wrangler.toml` at the repo root, replacing the placeholder
+   `00000000-0000-0000-0000-000000000000`, then commit and push.
 4. On the **quickplay-games** Pages project → **Settings → Functions → D1 database bindings**,
    add a binding: variable name `DB`, database `quickplay-scores`. Redeploy.
 5. Confirm it: `curl https://quickplay-games.pages.dev/api/scores/flipshield` should return `[]`
