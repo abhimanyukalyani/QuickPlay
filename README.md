@@ -112,13 +112,13 @@ accounts — a player is just a random id kept in their browser's `localStorage`
 inherently spoofable by someone determined (there's no server-authoritative copy of any game); the
 score bounds and throttle stop casual tampering, not a scripted attacker minting fresh browser ids.
 
-One-time setup, done by hand in the Cloudflare dashboard — this repo has no network path to
-`api.cloudflare.com` from its own tooling, so none of this can be scripted from here:
+`quickplay-scores` is already created and bound to the live Pages project. If it ever needs
+recreating — a new Cloudflare account, a fresh environment — the steps are, done by hand in the
+dashboard since this repo has no network path to `api.cloudflare.com` from its own tooling:
 
 1. **Storage & Databases → D1 → Create database**, name it `quickplay-scores`.
 2. Open its **Console** tab and run the contents of `migrations/0001_init.sql`.
-3. Copy the database's UUID into `wrangler.toml` at the repo root, replacing the placeholder
-   `00000000-0000-0000-0000-000000000000`, then commit and push.
+3. Copy the database's UUID into `wrangler.toml`'s `database_id`, commit and push.
 4. On the **quickplay-games** Pages project → **Settings → Functions → D1 database bindings**,
    add a binding: variable name `DB`, database `quickplay-scores`. Redeploy.
 5. Confirm it: `curl https://quickplay-games.pages.dev/api/scores/flipshield` should return `[]`
@@ -144,8 +144,6 @@ All optional — the site builds and runs with none of them set.
 
 ## What still needs a human
 
-- Create the `quickplay-scores` D1 database, run its migration, and bind it to the Pages
-  project — see "Leaderboard" above. The leaderboard API returns errors until this is done.
 - Connect the repo to Cloudflare Pages (needs the Cloudflare account) with the settings above.
 - Switch the repository's default branch to `main` in GitHub → Settings → General. Not
   required for the deploy, but PRs and clones still point at the planning branch until it

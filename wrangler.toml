@@ -5,4 +5,4 @@ pages_build_output_dir = "out"
 [[d1_databases]]
 binding = "DB"
 database_name = "quickplay-scores"
-database_id = "00000000-0000-0000-0000-000000000000" # REPLACE with the real database's UUID (see README "Leaderboard")
+database_id = "8d9f8bdb-ec04-4467-a929-ba212ac805eb"
