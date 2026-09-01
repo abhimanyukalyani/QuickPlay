@@ -36,6 +36,10 @@ yarn-error.log*
 # vercel
 .vercel
 
+# wrangler (local D1 state, wrangler pages dev cache)
+.wrangler
+.dev.vars
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

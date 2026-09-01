@@ -1,0 +1,8 @@
+name = "quickplay"
+compatibility_date = "2026-09-01"
+pages_build_output_dir = "out"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "quickplay-scores"
+database_id = "REPLACE_WITH_REAL_DATABASE_ID"

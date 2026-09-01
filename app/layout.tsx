@@ -52,9 +52,17 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             >
               Quick<span className="text-hot">play</span>
             </Link>
-            <span className="font-mono text-[9px] font-semibold uppercase tracking-[0.2em] text-dim">
-              Free · no sign-up
-            </span>
+            <div className="flex items-center gap-4">
+              <Link
+                href="/leaderboards/"
+                className="font-mono text-[9px] font-semibold uppercase tracking-[0.2em] text-dim transition hover:text-txt"
+              >
+                Leaderboards
+              </Link>
+              <span className="font-mono text-[9px] font-semibold uppercase tracking-[0.2em] text-dim">
+                Free · no sign-up
+              </span>
+            </div>
           </div>
         </header>
 

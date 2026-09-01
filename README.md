@@ -29,14 +29,19 @@ the site stays deployable anywhere.
 
 ```
 app/                 site shell: layout (nav/footer), home page, sitemap, robots, icon
+app/leaderboards/    all-games leaderboard page (client-side, fetches the API below)
 lib/games.ts         the game registry — home grid and sitemap both read from it
 lib/site.ts          site name, canonical URL, analytics/ads config from env
-components/          ad slot
+components/          ad slot, leaderboard list
+functions/api/scores/[game].ts   leaderboard API (Cloudflare Pages Function, reads/writes D1)
+migrations/          D1 schema for the leaderboard, applied by hand — see "Leaderboard" below
 games-src/<slug>.html   each game's source: <style>, markup and <script>, no document shell
 public/games/<slug>/    the built game page (generated — edit games-src/ instead)
+public/leaderboard.js   shared client script every game page loads: nickname, submit, render
 public/thumbs/       gameplay stills used on the home-page cards
 public/og/           1200x630 share images used in og:image tags
 scripts/             the tooling below
+wrangler.toml        D1 binding config Cloudflare Pages Functions reads at deploy time
 ```
 
 Game pages are deliberately *not* React routes. Each is a complete HTML document with its
@@ -96,6 +101,37 @@ It deploys to `<project>.pages.dev` until a custom domain is added, and the buil
 own URL from Cloudflare's `CF_PAGES_URL`, so canonical tags, OG tags and `sitemap.xml` are
 correct on the first deploy without anything being configured.
 
+## Leaderboard (Cloudflare D1)
+
+Each game still keeps its personal best in `localStorage`, same as always. If a player adds a
+nickname, that best score is also submitted to a small global leaderboard — shown inline on the
+game's own end screen and on `/leaderboards/`. The backend is a Cloudflare Pages Function
+(`functions/api/scores/[game].ts`) backed by D1: one row per `(game, player)`, upserted only when
+they beat their own score, throttled to one accepted write per 3 seconds per row. There are no
+accounts — a player is just a random id kept in their browser's `localStorage`. This is
+inherently spoofable by someone determined (there's no server-authoritative copy of any game); the
+score bounds and throttle stop casual tampering, not a scripted attacker minting fresh browser ids.
+
+One-time setup, done by hand in the Cloudflare dashboard — this repo has no network path to
+`api.cloudflare.com` from its own tooling, so none of this can be scripted from here:
+
+1. **Storage & Databases → D1 → Create database**, name it `quickplay-scores`.
+2. Open its **Console** tab and run the contents of `migrations/0001_init.sql`.
+3. Copy the database's UUID into `wrangler.toml` at the repo root, replacing
+   `REPLACE_WITH_REAL_DATABASE_ID`, then commit and push.
+4. On the **quickplay-games** Pages project → **Settings → Functions → D1 database bindings**,
+   add a binding: variable name `DB`, database `quickplay-scores`. Redeploy.
+5. Confirm it: `curl https://quickplay-games.pages.dev/api/scores/flipshield` should return `[]`
+   or real rows — not a 404 or an HTML error page, which would mean the binding didn't attach.
+
+Local testing is fully offline, no Cloudflare account needed:
+
+```bash
+npm run build
+npx wrangler d1 execute quickplay-scores --local --file=migrations/0001_init.sql
+npx wrangler pages dev out
+```
+
 ## Configuration
 
 All optional — the site builds and runs with none of them set.
@@ -108,6 +144,8 @@ All optional — the site builds and runs with none of them set.
 
 ## What still needs a human
 
+- Create the `quickplay-scores` D1 database, run its migration, and bind it to the Pages
+  project — see "Leaderboard" above. The leaderboard API returns errors until this is done.
 - Connect the repo to Cloudflare Pages (needs the Cloudflare account) with the settings above.
 - Switch the repository's default branch to `main` in GitHub → Settings → General. Not
   required for the deploy, but PRs and clones still point at the planning branch until it

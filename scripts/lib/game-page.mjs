@@ -94,6 +94,7 @@ ${head}
 <body>
 <a class="qp-home" href="/">← ${site.name}</a>
 ${body}
+<script src="/leaderboard.js"></script>
 </body>
 </html>
 `;

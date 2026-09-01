@@ -316,6 +316,7 @@
       <div><em>Score</em><span id="f-score">0</span></div>
       <div><em>Best combo</em><span id="f-combo">0</span></div>
       <div><em>Survived</em><span id="f-time">0s</span></div>
+      <div class="qp-lb" id="qp-lb"></div>
     </div>
     <button class="go" id="start" type="button">Start</button>
   </div>
@@ -493,6 +494,11 @@
     document.getElementById("f-score").textContent = score;
     document.getElementById("f-combo").textContent = bestCombo;
     document.getElementById("f-time").textContent = Math.round(elapsed) + "s";
+    if (window.QPLeaderboard) {
+      QPLeaderboard.submitScore("flipshield", score).then(function () {
+        QPLeaderboard.renderLeaderboard(document.getElementById("qp-lb"), "flipshield");
+      });
+    }
     document.getElementById("start").textContent = "Again";
     gate.hidden = false;
     document.getElementById("start").focus();
@@ -928,5 +934,6 @@
   requestAnimationFrame(frame);
 })();
 </script>
+<script src="/leaderboard.js"></script>
 </body>
 </html>

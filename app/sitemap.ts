@@ -11,6 +11,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "weekly",
       priority: 1,
     },
+    {
+      url: `${site.url}/leaderboards/`,
+      changeFrequency: "daily",
+      priority: 0.6,
+    },
     ...games.map((game) => ({
       url: `${site.url}${gameUrl(game.slug)}`,
       lastModified: new Date(game.added),

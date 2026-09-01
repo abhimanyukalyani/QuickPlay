@@ -364,6 +364,7 @@
     <div class="final" id="final" hidden>
       <div><em>Pins</em><span id="f-score">0</span></div>
       <div><em>Best</em><span id="f-best">0</span></div>
+      <div class="qp-lb" id="qp-lb"></div>
     </div>
     <button class="go" id="start" type="button">Start</button>
   </div>
@@ -587,6 +588,11 @@
     elFinal.hidden = false;
     elFScore.textContent = score;
     elFBest.textContent = best;
+    if (window.QPLeaderboard) {
+      QPLeaderboard.submitScore("slingline", score).then(function () {
+        QPLeaderboard.renderLeaderboard(document.getElementById("qp-lb"), "slingline");
+      });
+    }
     btnStart.textContent = "Again";
     gate.hidden = false;
     elLive.textContent = "Line lost at " + score + " pins. Best " + best + ".";
@@ -932,5 +938,6 @@
   requestAnimationFrame(frame);
 })();
 </script>
+<script src="/leaderboard.js"></script>
 </body>
 </html>
