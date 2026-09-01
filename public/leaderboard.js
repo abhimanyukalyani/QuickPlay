@@ -8,7 +8,7 @@
 
   var CLIENT_ID_KEY = "qp.clientId";
   var NAME_KEY = "qp.name";
-  var NAME_RE = /^[A-Za-z0-9 _.-]{3,20}$/;
+  var NAME_RE = /^[A-Za-z0-9 _.-]{2,20}$/;
 
   // A game's numeric score isn't always "points" — Chain Bloom's is a level number.
   var SCORE_FORMAT = {
@@ -67,7 +67,7 @@
     var existing = getName();
     if (existing) return existing;
 
-    var message = "Nickname for the leaderboard (3-20 characters):";
+    var message = "Nickname for the leaderboard (2-20 characters):";
     for (;;) {
       var input = window.prompt(message);
       if (input === null) return null;
@@ -76,7 +76,7 @@
         setName(trimmed);
         return trimmed;
       }
-      message = "3-20 letters, numbers, spaces, or . _ - only. Try again:";
+      message = "2-20 letters, numbers, spaces, or . _ - only. Try again:";
     }
   }
 

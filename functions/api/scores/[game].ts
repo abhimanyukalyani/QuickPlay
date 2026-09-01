@@ -26,9 +26,9 @@ const GAME_BOUNDS: Record<string, { min: number; max: number }> = {
   "chain-bloom": { min: 1, max: 12 },
 };
 
-// 3-20 chars, no markup-relevant characters — belt-and-braces alongside textContent
+// 2-20 chars, no markup-relevant characters — belt-and-braces alongside textContent
 // rendering on the client, since this is the one field strangers see from each other.
-const NAME_RE = /^[A-Za-z0-9 _.-]{3,20}$/;
+const NAME_RE = /^[A-Za-z0-9 _.-]{2,20}$/;
 const CLIENT_ID_RE = /^[0-9a-f-]{36}$/i;
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
