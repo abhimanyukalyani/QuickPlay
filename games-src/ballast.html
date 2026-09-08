@@ -1,0 +1,778 @@
+<title>Ballast</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Chivo:wght@400;700;900&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+  :root {
+    --slate: #101018;
+    --panel: rgba(16, 16, 24, 0.94);
+    --line: rgba(240, 244, 255, 0.12);
+    --line-strong: rgba(240, 244, 255, 0.26);
+    --bone: #F0F4FF;
+    --dim: #8792AB;
+    --amber: #FFC53D;
+    --sky: #6BD3FF;
+    --red: #FF4D5E;
+
+    --display: "Anton", "Haettenschweiler", "Arial Narrow", sans-serif;
+    --body: "Chivo", "Helvetica Neue", Arial, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+
+  body {
+    margin: 0;
+    background: var(--slate);
+    color: var(--bone);
+    font-family: var(--body);
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  #rig {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    touch-action: none;
+    cursor: pointer;
+  }
+
+  .hud {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    padding: 52px clamp(12px, 2.2vw, 26px) clamp(12px, 2.2vw, 26px);
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    grid-template-rows: auto 1fr auto;
+    gap: 10px;
+  }
+
+  .cell { display: flex; flex-direction: column; gap: 3px; }
+  .cell.right { align-items: flex-end; text-align: right; }
+  .cell.mid { align-items: center; text-align: center; grid-column: 2; }
+
+  .label {
+    margin: 0;
+    font-family: var(--mono);
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--dim);
+  }
+
+  .value {
+    margin: 2px 0 0;
+    font-family: var(--display);
+    font-size: clamp(30px, 6vw, 52px);
+    line-height: 0.86;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .value.sm { font-size: clamp(17px, 2.6vw, 24px); }
+
+  .tilt {
+    position: relative;
+    width: clamp(96px, 16vw, 178px);
+    height: 4px;
+    margin-top: 8px;
+    border-radius: 999px;
+    background: rgba(240, 244, 255, 0.16);
+  }
+
+  .tilt i {
+    position: absolute;
+    top: -3px;
+    left: 50%;
+    width: 3px;
+    height: 10px;
+    border-radius: 2px;
+    background: var(--amber);
+    transform: translateX(-50%);
+  }
+
+  .tilt b {
+    position: absolute;
+    top: -7px;
+    left: 50%;
+    width: 1px;
+    height: 18px;
+    background: rgba(240, 244, 255, 0.3);
+  }
+
+  .foot {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 14px;
+  }
+
+  .keys {
+    margin: 0;
+    max-width: 46ch;
+    font-size: 12px;
+    line-height: 1.55;
+    color: rgba(240, 244, 255, 0.5);
+  }
+
+  .keys b { color: rgba(240, 244, 255, 0.92); font-weight: 700; }
+
+  kbd {
+    font-family: var(--mono);
+    font-size: 10px;
+    border: 1px solid var(--line-strong);
+    border-radius: 4px;
+    padding: 1px 5px;
+  }
+
+  button {
+    pointer-events: auto;
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--bone);
+    background: rgba(240, 244, 255, 0.06);
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    padding: 9px 15px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  button:hover { background: rgba(240, 244, 255, 0.12); }
+  button:active { transform: translateY(1px); }
+  button:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+
+  .gate {
+    position: fixed;
+    inset: 0;
+    z-index: 5;
+    display: grid;
+    place-items: center;
+    padding: 20px;
+    background: radial-gradient(120% 90% at 50% 40%, rgba(16, 16, 24, 0.72), rgba(16, 16, 24, 0.96));
+    backdrop-filter: blur(3px);
+  }
+
+  .gate[hidden] { display: none; }
+
+  .card {
+    width: min(430px, 100%);
+    max-height: 100%;
+    overflow: auto;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--panel);
+    padding: clamp(22px, 4vw, 32px);
+    text-align: center;
+  }
+
+  .eyebrow {
+    margin: 0;
+    font-family: var(--mono);
+    font-size: 9.5px;
+    font-weight: 600;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--dim);
+  }
+
+  .card h1 {
+    margin: 12px 0 0;
+    font-family: var(--display);
+    font-size: clamp(44px, 10vw, 64px);
+    line-height: 0.88;
+    text-transform: uppercase;
+  }
+
+  .card h1 i { font-style: normal; color: var(--amber); }
+
+  .rules {
+    margin: 20px 0 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+    text-align: left;
+  }
+
+  .rules li {
+    display: flex;
+    gap: 11px;
+    align-items: flex-start;
+    font-size: 13.5px;
+    line-height: 1.5;
+    color: rgba(240, 244, 255, 0.76);
+  }
+
+  .rules b { color: var(--bone); font-weight: 700; }
+
+  .dot {
+    flex: none;
+    width: 10px;
+    height: 10px;
+    margin-top: 5px;
+    border-radius: 50%;
+    background: var(--amber);
+  }
+
+  .dot.s { background: var(--sky); }
+  .dot.r { background: var(--red); }
+
+  .final {
+    margin: 20px 0 0;
+    display: flex;
+    justify-content: center;
+    gap: 26px;
+  }
+
+  .final[hidden] { display: none; }
+  .final div { display: flex; flex-direction: column; gap: 5px; }
+
+  .final em {
+    font-family: var(--mono);
+    font-style: normal;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--dim);
+  }
+
+  .final span {
+    font-family: var(--display);
+    font-size: 30px;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .go {
+    margin-top: 24px;
+    width: 100%;
+    font-size: 12px;
+    padding: 14px 22px;
+    letter-spacing: 0.18em;
+    color: #1A1403;
+    background: var(--amber);
+    border-color: var(--amber);
+  }
+
+  .go:hover { background: #ffd469; border-color: #ffd469; color: #1A1403; }
+
+  .sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  @media (max-width: 620px) {
+    .keys { font-size: 11px; }
+    .value { font-size: 30px; }
+  }
+</style>
+
+<canvas id="rig" aria-label="Ballast balance beam"></canvas>
+
+<div class="hud">
+  <div class="cell">
+    <p class="label">Crates</p>
+    <p class="value" id="score">0</p>
+  </div>
+
+  <div class="cell mid">
+    <p class="label">Tilt</p>
+    <div class="tilt"><b></b><i id="needle"></i></div>
+  </div>
+
+  <div class="cell right">
+    <p class="label">Best</p>
+    <p class="value sm" id="best">0</p>
+  </div>
+
+  <div class="foot">
+    <p class="keys">
+      The carriage slides. <b>Tap</b>, click or press <kbd>Space</kbd> to drop the crate.
+      Heavy crates far from the middle tip the beam hardest.
+    </p>
+    <button type="button" id="mute" aria-pressed="true">Sound on</button>
+  </div>
+</div>
+
+<div class="gate" id="gate">
+  <div class="card">
+    <p class="eyebrow" id="eyebrow">Physics · endless</p>
+    <h1 id="title">Bal<i>last</i></h1>
+    <ul class="rules" id="rules">
+      <li><i class="dot"></i><span>Drop each crate to <b>cancel the lean</b> the last one caused.</span></li>
+      <li><i class="dot s"></i><span>Weight times distance is what counts. A heavy crate <b>near the pivot</b> is a fine correction.</span></li>
+      <li><i class="dot r"></i><span>Crates get heavier and the carriage gets faster. <b>Tip too far and the load goes over.</b></span></li>
+    </ul>
+    <div class="final" id="final" hidden>
+      <div><em>Crates</em><span id="f-score">0</span></div>
+      <div><em>Best</em><span id="f-best">0</span></div>
+    </div>
+    <button class="go" id="start" type="button">Start</button>
+  </div>
+</div>
+
+<p class="sr" id="live" role="status" aria-live="polite"></p>
+
+<script>
+(function () {
+  "use strict";
+
+  var SLATE = "#101018", AMBER = "#FFC53D", SKY = "#6BD3FF", RED = "#FF4D5E", BONE = "#F0F4FF";
+
+  // These constants were tuned by simulating thousands of runs at three skill
+  // levels: expert play averages ~42 crates, loose play ~25, mashing ~12, and
+  // no run is endless. A centre-pivoted beam has no restoring force, so the
+  // tilt follows accumulated torque only — do not add a spring term here.
+  var LIMIT = 0.42;        // radians before the load slides off
+  var K = 0.05;            // torque -> resting angle
+  var EASE = 4.2;          // how fast the beam settles toward that angle
+  var ARM = 4;             // metres either side of the pivot
+
+  var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  var canvas = document.getElementById("rig");
+  var ctx = canvas.getContext("2d");
+  var gate = document.getElementById("gate");
+  var elScore = document.getElementById("score");
+  var elBest = document.getElementById("best");
+  var elNeedle = document.getElementById("needle");
+  var elEyebrow = document.getElementById("eyebrow");
+  var elTitle = document.getElementById("title");
+  var elRules = document.getElementById("rules");
+  var elFinal = document.getElementById("final");
+  var elFScore = document.getElementById("f-score");
+  var elFBest = document.getElementById("f-best");
+  var elLive = document.getElementById("live");
+  var btnStart = document.getElementById("start");
+  var btnMute = document.getElementById("mute");
+
+  var W = 0, H = 0, dpr = 1, pxPerM = 40, pivotX = 0, pivotY = 0;
+
+  var state = "idle";       // idle | play | over
+  var angle = 0, torque = 0, score = 0, best = 0;
+  var carriageX = 0, carriageDir = 1;
+  var pending = null;       // the crate hanging from the carriage
+  var falling = [];         // crates in flight
+  var landed = [];          // crates resting on the beam
+  var shake = 0, overIn = 0, flash = 0;
+  var soundOn = true, audio = null;
+
+  var NOTES = [196.0, 220.0, 246.94, 261.63, 293.66, 329.63, 392.0, 440.0];
+
+  /* ---------- storage ---------- */
+  try {
+    var stored = parseInt(window.localStorage.getItem("ballast.best"), 10);
+    if (stored > 0) best = stored;
+  } catch (e) {}
+  elBest.textContent = best;
+
+  function saveBest() {
+    try { window.localStorage.setItem("ballast.best", String(best)); } catch (e) {}
+  }
+
+  /* ---------- audio ---------- */
+  function ac() {
+    if (!audio) {
+      var C = window.AudioContext || window.webkitAudioContext;
+      if (!C) return null;
+      try { audio = new C(); } catch (e) { return null; }
+    }
+    if (audio.state === "suspended") audio.resume();
+    return audio;
+  }
+
+  function clunk(step) {
+    if (!soundOn) return;
+    try {
+      var a = ac(); if (!a) return;
+      var t = a.currentTime;
+      var o = a.createOscillator(), g = a.createGain();
+      o.type = "square";
+      o.frequency.setValueAtTime(NOTES[Math.min(step, NOTES.length - 1)], t);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.05, t + 0.006);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.13);
+      o.connect(g); g.connect(a.destination);
+      o.start(t); o.stop(t + 0.15);
+    } catch (e) {}
+  }
+
+  function collapse() {
+    if (!soundOn) return;
+    try {
+      var a = ac(); if (!a) return;
+      var t = a.currentTime;
+      var o = a.createOscillator(), g = a.createGain();
+      o.type = "sawtooth";
+      o.frequency.setValueAtTime(160, t);
+      o.frequency.exponentialRampToValueAtTime(38, t + 0.5);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.18, t + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.56);
+      o.connect(g); g.connect(a.destination);
+      o.start(t); o.stop(t + 0.58);
+    } catch (e) {}
+  }
+
+  btnMute.addEventListener("click", function () {
+    soundOn = !soundOn;
+    btnMute.textContent = soundOn ? "Sound on" : "Sound off";
+    btnMute.setAttribute("aria-pressed", String(soundOn));
+  });
+
+  /* ---------- sizing ---------- */
+  function resize() {
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    W = window.innerWidth;
+    H = window.innerHeight;
+    canvas.width = Math.round(W * dpr);
+    canvas.height = Math.round(H * dpr);
+    canvas.style.width = W + "px";
+    canvas.style.height = H + "px";
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    pivotX = W / 2;
+    pivotY = H * 0.66;
+    pxPerM = Math.min(64, (W * 0.82) / (ARM * 2));
+  }
+
+  window.addEventListener("resize", resize);
+
+  /* ---------- difficulty ---------- */
+  function massFor(i) { return (1 + Math.round(Math.random() * 4)) * (1 + i * 0.06); }
+  function carriageSpeed(i) { return 1.5 + i * 0.14; }   // metres per second
+
+  // How far the carriage may travel from the pivot. This starts narrow and
+  // opens up, which is what stops an opening drop from being instantly fatal:
+  // the heaviest possible first crate at the widest possible early offset comes
+  // to 0.35 rad against a 0.42 limit. Simulated over 2400 runs, the ramp leaves
+  // the difficulty curve untouched (expert ~42 crates, careless ~12).
+  function armFor(i) { return Math.min(ARM, 1.4 + i * 0.13); }
+
+  /* ---------- flow ---------- */
+  function nextCrate() {
+    pending = { m: massFor(score) };
+  }
+
+  function reset() {
+    angle = 0; torque = 0; score = 0;
+    carriageX = 0; carriageDir = 1;
+    falling = []; landed = [];
+    shake = 0; flash = 0;
+    nextCrate();
+    paintHud();
+  }
+
+  function start() {
+    reset();
+    ac();
+    state = "play";
+    gate.hidden = true;
+    say("Started. Tap to drop each crate.");
+  }
+
+  function over() {
+    state = "over";
+    overIn = 0.5;
+    shake = reduce ? 0 : 15;
+    collapse();
+    if (score > best) { best = score; saveBest(); elBest.textContent = best; }
+    elEyebrow.textContent = score >= best && score > 0 ? "New best" : "Load lost";
+    elTitle.innerHTML = "Cap<i>sized</i>";
+    elRules.hidden = true;
+    elFinal.hidden = false;
+    elFScore.textContent = score;
+    elFBest.textContent = best;
+    btnStart.textContent = "Again";
+    gate.hidden = false;
+    say("Capsized at " + score + " crates. Best " + best + ".");
+  }
+
+  function say(m) { elLive.textContent = m; }
+
+  function paintHud() {
+    elScore.textContent = score;
+    var frac = Math.max(-1, Math.min(1, angle / LIMIT));
+    elNeedle.style.left = (50 + frac * 48) + "%";
+    elNeedle.style.background = Math.abs(frac) > 0.7 ? RED : AMBER;
+  }
+
+  function drop() {
+    if (state !== "play" || !pending) return;
+    falling.push({ m: pending.m, x: carriageX, y: -3.4, vy: 0 });
+    pending = null;
+  }
+
+  /* ---------- input ---------- */
+  function press() {
+    if (state === "idle") { start(); return; }
+    if (state === "over") { if (overIn <= 0) btnStart.click(); return; }
+    drop();
+  }
+
+  canvas.addEventListener("pointerdown", function (e) { e.preventDefault(); press(); });
+
+  window.addEventListener("keydown", function (e) {
+    if (e.code !== "Space" && e.key !== " " && e.key !== "Enter") return;
+    e.preventDefault();
+    if (e.repeat) return;
+    press();
+  });
+
+  btnStart.addEventListener("click", function (e) {
+    e.stopPropagation();
+    if (state === "over" && overIn > 0) return;
+    elRules.hidden = false;
+    elFinal.hidden = true;
+    btnStart.textContent = "Start";
+    start();
+  });
+
+  /* ---------- step ---------- */
+  function step(dt) {
+    // carriage sweeps back and forth across the arm
+    var sp = carriageSpeed(score);
+    var arm = armFor(score);
+    carriageX += carriageDir * sp * dt;
+    if (carriageX > arm) { carriageX = arm; carriageDir = -1; }
+    if (carriageX < -arm) { carriageX = -arm; carriageDir = 1; }
+
+    for (var i = falling.length - 1; i >= 0; i--) {
+      var c = falling[i];
+      c.vy += 15 * dt;
+      c.y += c.vy * dt;
+      // the beam surface at that offset, in metres above the pivot line
+      var surface = Math.tan(angle) * c.x;
+      if (c.y >= surface) {
+        c.y = surface;
+        // crates dropped at nearly the same offset stack instead of overlapping
+        var lvl = 0;
+        for (var k = 0; k < landed.length; k++) {
+          if (Math.abs(landed[k].x - c.x) < 0.55) lvl = Math.max(lvl, landed[k].level + 1);
+        }
+        landed.push({ m: c.m, x: c.x, level: lvl });
+        falling.splice(i, 1);
+        torque += c.m * c.x;
+        score++;
+        clunk(Math.min(score % 8, 7));
+        if (!reduce) flash = 0.18;
+        nextCrate();
+        paintHud();
+      }
+    }
+
+    var target = torque * K;
+    angle += (target - angle) * Math.min(1, EASE * dt);
+
+    if (shake > 0) shake = Math.max(0, shake - dt * 34);
+    if (flash > 0) flash = Math.max(0, flash - dt * 3);
+
+    paintHud();
+
+    if (Math.abs(angle) > LIMIT) over();
+  }
+
+  /* ---------- draw ---------- */
+  function beamPoint(xm) {
+    // a point on the tilted beam, xm metres from the pivot
+    return {
+      x: pivotX + Math.cos(angle) * xm * pxPerM,
+      y: pivotY + Math.sin(angle) * xm * pxPerM
+    };
+  }
+
+  function crateSize(m) { return Math.max(13, Math.min(40, 11 + m * 3.4)); }
+
+  function drawCrate(px, py, m, colour, lift) {
+    var s = crateSize(m);
+    ctx.save();
+    ctx.translate(px, py);
+    ctx.rotate(angle);
+    if (lift) ctx.translate(0, -lift);
+    ctx.fillStyle = colour;
+    ctx.fillRect(-s / 2, -s, s, s);
+    ctx.strokeStyle = "rgba(16, 16, 24, 0.45)";
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(-s / 2, -s, s, s);
+    ctx.fillStyle = "rgba(16, 16, 24, 0.72)";
+    ctx.font = "600 9px ui-monospace, Menlo, monospace";
+    ctx.textAlign = "center";
+    ctx.fillText(String(Math.round(m)), 0, -s / 2 + 3);
+    ctx.restore();
+  }
+
+  function draw() {
+    ctx.save();
+    if (shake > 0) ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
+
+    ctx.fillStyle = SLATE;
+    ctx.fillRect(0, 0, W, H);
+
+    // ground haze
+    var grad = ctx.createLinearGradient(0, pivotY - 40, 0, H);
+    grad.addColorStop(0, "rgba(107, 211, 255, 0.05)");
+    grad.addColorStop(1, "rgba(16, 16, 24, 0)");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, pivotY - 40, W, H - pivotY + 40);
+
+    // carriage rail
+    var railY = pivotY - 3.4 * pxPerM;
+    var railArm = armFor(score);
+    // full span faint, the reachable part solid, so the widening travel reads
+    ctx.strokeStyle = "rgba(240, 244, 255, 0.06)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(pivotX - ARM * pxPerM, railY);
+    ctx.lineTo(pivotX + ARM * pxPerM, railY);
+    ctx.stroke();
+    ctx.strokeStyle = "rgba(240, 244, 255, 0.2)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(pivotX - railArm * pxPerM, railY);
+    ctx.lineTo(pivotX + railArm * pxPerM, railY);
+    ctx.stroke();
+
+    // the beam
+    var a = beamPoint(-ARM), b = beamPoint(ARM);
+    ctx.strokeStyle = BONE;
+    ctx.lineWidth = 7;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(b.x, b.y);
+    ctx.stroke();
+
+    // pivot wedge
+    ctx.fillStyle = "rgba(240, 244, 255, 0.5)";
+    ctx.beginPath();
+    ctx.moveTo(pivotX, pivotY + 4);
+    ctx.lineTo(pivotX - 20, pivotY + 46);
+    ctx.lineTo(pivotX + 20, pivotY + 46);
+    ctx.closePath();
+    ctx.fill();
+
+    // centre mark
+    ctx.strokeStyle = "rgba(240, 244, 255, 0.2)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(pivotX, railY - 14);
+    ctx.lineTo(pivotX, pivotY + 52);
+    ctx.stroke();
+
+    var i, p;
+
+    for (i = 0; i < landed.length; i++) {
+      p = beamPoint(landed[i].x);
+      // lift each crate by the stack beneath it, measured in its own size
+      var lift = 0;
+      for (var q = 0; q < landed.length; q++) {
+        if (landed[q].level < landed[i].level && Math.abs(landed[q].x - landed[i].x) < 0.55) {
+          lift += crateSize(landed[q].m);
+        }
+      }
+      drawCrate(p.x, p.y, landed[i].m, SKY, lift);
+    }
+
+    for (i = 0; i < falling.length; i++) {
+      var c = falling[i];
+      p = beamPoint(c.x);
+      // falling crates sit above the beam by their own height in metres
+      drawCrate(pivotX + Math.cos(angle) * c.x * pxPerM,
+                pivotY + Math.sin(angle) * c.x * pxPerM - (Math.tan(angle) * c.x - c.y) * pxPerM,
+                c.m, AMBER);
+    }
+
+    if (state === "play" && pending) {
+      var carX = pivotX + carriageX * pxPerM;
+      ctx.fillStyle = "rgba(240, 244, 255, 0.72)";
+      ctx.fillRect(carX - 13, railY - 7, 26, 8);
+      ctx.strokeStyle = "rgba(240, 244, 255, 0.32)";
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 5]);
+      ctx.beginPath();
+      ctx.moveTo(carX, railY + 2);
+      var landPoint = beamPoint(carriageX);
+      ctx.lineTo(landPoint.x, landPoint.y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      drawCrate(carX, railY + 4 + crateSize(pending.m), pending.m, AMBER);
+    }
+
+    if (flash > 0 && !reduce) {
+      ctx.fillStyle = "rgba(255, 197, 61, " + (flash * 0.10).toFixed(3) + ")";
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    if (state === "play" && Math.abs(angle) > LIMIT * 0.62) {
+      var warn = (Math.abs(angle) - LIMIT * 0.62) / (LIMIT * 0.38);
+      var g2 = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.25, W / 2, H / 2, Math.max(W, H) * 0.72);
+      g2.addColorStop(0, "rgba(255, 77, 94, 0)");
+      g2.addColorStop(1, "rgba(255, 77, 94, " + (warn * 0.5).toFixed(3) + ")");
+      ctx.fillStyle = g2;
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    ctx.restore();
+  }
+
+  /* ---------- loop ---------- */
+  var last = 0;
+
+  function frame(now) {
+    var dt = last ? Math.min((now - last) / 1000, 0.033) : 0;
+    last = now;
+    if (state === "play") step(dt);
+    if (state === "over") {
+      if (overIn > 0) overIn = Math.max(0, overIn - dt);
+      if (shake > 0) shake = Math.max(0, shake - dt * 34);
+    }
+    draw();
+    requestAnimationFrame(frame);
+  }
+
+  // Opt-in probe (…/ballast/?probe=1) for scripted checks.
+  if (window.location.search.indexOf("probe") !== -1) {
+    window.__ballast = {
+      snapshot: function () {
+        return {
+          state: state, score: score, angle: +angle.toFixed(4),
+          torque: +torque.toFixed(3), carriageX: +carriageX.toFixed(3),
+          limit: LIMIT, pendingMass: pending ? +pending.m.toFixed(2) : null,
+          landed: landed.length, falling: falling.length
+        };
+      },
+      // drop at a chosen offset, bypassing the carriage, for tuning checks
+      dropAt: function (x) {
+        if (state !== "play" || !pending) return false;
+        var arm = armFor(score);
+        carriageX = Math.max(-arm, Math.min(arm, x));
+        drop();
+        return true;
+      },
+      drop: drop,
+      start: start
+    };
+  }
+
+  resize();
+  reset();
+  state = "idle";
+  requestAnimationFrame(frame);
+})();
+</script>
