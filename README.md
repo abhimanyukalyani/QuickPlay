@@ -82,6 +82,16 @@ means changing the site's URL is a rebuild, not a hand-edit of every game page.
 
 ## Testing a game
 
+```bash
+npm run build && npm run serve       # in another shell
+npm run test:games http://localhost:3000
+```
+
+`scripts/test-games.mjs` drives all nine games in a real browser: every page loads without
+JS errors, Refract's twelve levels are re-solved, Ballast's difficulty separation is
+measured, Nocturne's on-time hits are scored, Telegraph clears typed words, Lantern's
+generated paths are validated, and the home grid and sitemap are checked. 26 checks.
+
 Each game exposes a read-only probe under `?probe=1` — absent from a normal page load —
 which is how the games are driven headlessly. `window.__<slug>` gives a `snapshot()` plus
 whatever inputs that game needs (`__refract.flip`, `__ballast.dropAt`, `__lantern.walkCorrectly`,
