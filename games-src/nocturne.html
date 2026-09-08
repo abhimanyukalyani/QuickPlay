@@ -197,6 +197,8 @@
     color: rgba(246, 240, 255, 0.76);
   }
 
+  .rules[hidden] { display: none; }
+
   .rules b { color: var(--pearl); font-weight: 700; }
 
   .dot {
@@ -448,6 +450,15 @@
     btnMute.setAttribute("aria-pressed", String(soundOn));
   });
 
+  // Coming back to a hidden tab should resume cleanly rather than resolve a
+  // backlog of beats the player never saw.
+  document.addEventListener("visibilitychange", function () {
+    if (document.hidden || state !== "play") return;
+    var now = clock();
+    rings = rings.filter(function (r) { return r.at > now; });
+    if (nextBeat < now) nextBeat = now + 1.0;
+  });
+
   /* ---------- sizing ---------- */
   function resize() {
     dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -518,13 +529,33 @@
     say("Over. Score " + score + ", best combo " + bestCombo + ".");
   }
 
+  // Rings must exist for the whole TRAVEL window, otherwise they appear a few
+  // pixels from the target circle and there is nothing to read. Their sound is a
+  // separate concern: it is scheduled only LEAD ahead, close to when it plays.
   function schedule() {
     var now = clock();
-    while (nextBeat < now + LEAD) {
-      rings.push({ at: nextBeat, hit: false, judged: false });
-      tickSound(nextBeat, beatIndex % 8, beatIndex % 4 === 0);
+
+    // A backgrounded tab keeps the clock running while rAF is stopped, so on
+    // return every missed beat would spawn at once — a wall of rings and
+    // oscillators that empties the lives bar before a frame is drawn. Re-anchor
+    // instead of catching up.
+    if (now - nextBeat > TRAVEL) {
+      nextBeat = now + 1.0;
+      rings = rings.filter(function (r) { return r.at > now; });
+    }
+
+    while (nextBeat < now + TRAVEL) {
+      rings.push({ at: nextBeat, hit: false, judged: false, sounded: false, step: beatIndex % 8, strong: beatIndex % 4 === 0 });
       beatIndex++;
       nextBeat += interval();
+    }
+
+    for (var i = 0; i < rings.length; i++) {
+      var r = rings[i];
+      if (!r.sounded && r.at - now <= LEAD) {
+        r.sounded = true;
+        tickSound(r.at, r.step, r.strong);
+      }
     }
   }
 
@@ -679,12 +710,17 @@
             : "rgba(246, 240, 255, " + (fade * 0.22).toFixed(3) + ")";
           ctx.lineWidth = r.hit ? 3 : 2;
           ctx.beginPath();
-          ctx.arc(cx, cy, targetR * (r.hit ? 1 - fade * 0.35 : 1 + (1 - fade) * 0.12), 0, Math.PI * 2);
+          ctx.arc(cx, cy, Math.max(0, targetR * (r.hit ? 1 - fade * 0.35 : 1 + (1 - fade) * 0.12)), 0, Math.PI * 2);
           ctx.stroke();
           continue;
         }
 
-        var rad = targetR + (1 - progress) * Math.max(W, H) * 0.52;
+        // Once the run ends, step() stops judging and culling rings, so a
+        // leftover ring keeps ageing while draw() runs. Its radius would go
+        // negative and canvas arc() throws. Drop anything past the hit window
+        // and clamp what remains.
+        if (remain < -GOOD) continue;
+        var rad = Math.max(0, targetR + (1 - progress) * Math.max(W, H) * 0.52);
         var near = Math.max(0, 1 - Math.abs(remain) / 0.5);
         ctx.strokeStyle = "rgba(255, 59, 107, " + (0.28 + near * 0.62).toFixed(3) + ")";
         ctx.lineWidth = 2 + near * 3;

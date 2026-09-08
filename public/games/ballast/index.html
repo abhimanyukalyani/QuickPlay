@@ -236,6 +236,8 @@
     color: rgba(240, 244, 255, 0.76);
   }
 
+  .rules[hidden] { display: none; }
+
   .rules b { color: var(--bone); font-weight: 700; }
 
   .dot {
@@ -388,6 +390,7 @@
   var K = 0.05;            // torque -> resting angle
   var EASE = 4.2;          // how fast the beam settles toward that angle
   var ARM = 4;             // metres either side of the pivot
+  var COL_W = 0.55;        // metres per stacking column
 
   var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -605,12 +608,14 @@
       var surface = Math.tan(angle) * c.x;
       if (c.y >= surface) {
         c.y = surface;
-        // crates dropped at nearly the same offset stack instead of overlapping
+        // Crates stack by column. Levels were previously derived from whichever
+        // neighbour happened to be within range, which chains transitively: a
+        // crate could inherit a high level from a neighbour while nothing sat
+        // directly beneath it, and render floating in mid-air.
+        var col = Math.round(c.x / COL_W);
         var lvl = 0;
-        for (var k = 0; k < landed.length; k++) {
-          if (Math.abs(landed[k].x - c.x) < 0.55) lvl = Math.max(lvl, landed[k].level + 1);
-        }
-        landed.push({ m: c.m, x: c.x, level: lvl });
+        for (var k = 0; k < landed.length; k++) if (landed[k].col === col) lvl++;
+        landed.push({ m: c.m, x: c.x, col: col, level: lvl });
         falling.splice(i, 1);
         torque += c.m * c.x;
         score++;
@@ -723,10 +728,10 @@
 
     for (i = 0; i < landed.length; i++) {
       p = beamPoint(landed[i].x);
-      // lift each crate by the stack beneath it, measured in its own size
+      // lift by exactly the crates below it in its own column
       var lift = 0;
       for (var q = 0; q < landed.length; q++) {
-        if (landed[q].level < landed[i].level && Math.abs(landed[q].x - landed[i].x) < 0.55) {
+        if (landed[q].col === landed[i].col && landed[q].level < landed[i].level) {
           lift += crateSize(landed[q].m);
         }
       }

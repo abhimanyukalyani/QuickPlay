@@ -180,6 +180,8 @@
     color: rgba(232, 244, 255, 0.76);
   }
 
+  .rules[hidden] { display: none; }
+
   .rules b { color: var(--ice); font-weight: 700; }
 
   .dot {
@@ -497,7 +499,11 @@
     solved = true;
     solveGlow = 1;
     advanceIn = 1.15;
-    if (index + 1 > best) { best = Math.min(index + 2, LEVELS.length); saveBest(); }
+    // `best` is the 1-based level to resume on, so clearing level N unlocks N+1.
+    // Comparing index+1 here would never exceed `best` on the furthest level,
+    // which silently dropped progress on alternate clears.
+    var unlocked = Math.min(index + 2, LEVELS.length);
+    if (unlocked > best) { best = unlocked; saveBest(); }
     chord();
     say("Level " + (index + 1) + " solved in " + turns + " turns.");
   }

@@ -23,19 +23,34 @@ const results = [];
 const pass = (n, d = "") => results.push({ ok: true, n, d });
 const fail = (n, d = "") => results.push({ ok: false, n, d });
 
-// Network failures for webfonts are sandbox egress noise, not game bugs.
-const isNoise = (t) =>
-  /fonts\.(googleapis|gstatic)\.com/.test(t) ||
-  /ERR_CONNECTION_RESET|ERR_NAME_NOT_RESOLVED|ERR_CONNECTION_REFUSED|Failed to load resource/.test(t);
+// Webfonts are fetched from Google and a sandbox may not be allowed out, which
+// is environment noise rather than a game bug. Everything else that fails to
+// load is a real problem — so decide by URL, never by matching the console text:
+// a failed subresource logs a generic "Failed to load resource" with no URL, and
+// pattern-matching that string would swallow genuine 404s too.
+const isFontHost = (u) => /fonts\.(googleapis|gstatic)\.com/.test(u);
 
 async function open(slug, query = "") {
   const page = await browser.newPage({ viewport: { width: 1280, height: 820 } });
   const errs = [];
-  page.on("console", (m) => { if (m.type() === "error" && !isNoise(m.text())) errs.push(m.text()); });
+  const bad = [];
+  page.on("console", (m) => {
+    if (m.type() !== "error") return;
+    const t = m.text();
+    if (/^Failed to load resource/.test(t)) return; // the URL-aware hooks below judge these
+    if (isFontHost(t)) return;
+    errs.push(t);
+  });
   page.on("pageerror", (e) => errs.push("pageerror: " + e.message));
+  page.on("requestfailed", (r) => {
+    if (!isFontHost(r.url())) bad.push(`request failed ${r.url()}`);
+  });
+  page.on("response", (r) => {
+    if (r.status() >= 400 && !isFontHost(r.url())) bad.push(`HTTP ${r.status()} ${r.url()}`);
+  });
   await page.goto(`${base}/games/${slug}/${query}`, { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(700);
-  return { page, errs };
+  return { page, errs, bad };
 }
 
 const SLUGS = ["flipshield", "chain-bloom", "slingline", "longwave",
@@ -43,10 +58,11 @@ const SLUGS = ["flipshield", "chain-bloom", "slingline", "longwave",
 
 /* ---------- 1. every page loads clean ---------- */
 for (const slug of SLUGS) {
-  const { page, errs } = await open(slug);
+  const { page, errs, bad } = await open(slug);
   const hasCanvas = await page.locator("canvas").count();
   const title = await page.title();
   if (errs.length) fail(`${slug} loads clean`, errs.slice(0, 2).join(" | "));
+  else if (bad.length) fail(`${slug} loads clean`, bad.slice(0, 2).join(" | "));
   else if (!hasCanvas) fail(`${slug} loads clean`, "no canvas");
   else if (!/QuickPlay/.test(title)) fail(`${slug} loads clean`, `title: ${title}`);
   else pass(`${slug} loads clean`, `"${title.slice(0, 42)}…"`);
@@ -58,8 +74,8 @@ for (const slug of SLUGS) {
   const { page, errs } = await open("nocturne", "?probe=1");
   await page.evaluate(() => window.__nocturne.start());
 
-  // Beats are only queued LEAD (0.25s) ahead, so poll for one to appear rather
-  // than sleeping — a fixed wait just lands after the beat has already been missed.
+  // Poll for a ring that is still due rather than sleeping a fixed amount — a
+  // fixed wait just lands after the beat has already been missed.
   const nextDue = async () => {
     for (let t = 0; t < 80; t++) {
       const w = await page.evaluate(() => window.__nocturne.hitNext());
