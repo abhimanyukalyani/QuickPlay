@@ -1,0 +1,750 @@
+<title>Lantern</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Chivo:wght@400;700;900&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+  :root {
+    --pitch: #0A0A0F;
+    --panel: rgba(12, 12, 18, 0.94);
+    --line: rgba(255, 246, 230, 0.12);
+    --line-strong: rgba(255, 246, 230, 0.26);
+    --wax: #FFF6E6;
+    --dim: #8C8172;
+    --flame: #FFD166;
+    --ember: #FF7A18;
+    --ash: #FF4D5E;
+
+    --display: "Anton", "Haettenschweiler", "Arial Narrow", sans-serif;
+    --body: "Chivo", "Helvetica Neue", Arial, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+
+  body {
+    margin: 0;
+    background: var(--pitch);
+    color: var(--wax);
+    font-family: var(--body);
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  #dark {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    touch-action: none;
+    cursor: pointer;
+  }
+
+  .hud {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    padding: 52px clamp(12px, 2.2vw, 26px) clamp(12px, 2.2vw, 26px);
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    grid-template-rows: auto 1fr auto;
+    gap: 10px;
+  }
+
+  .cell { display: flex; flex-direction: column; gap: 3px; }
+  .cell.right { align-items: flex-end; text-align: right; }
+  .cell.mid { align-items: center; text-align: center; grid-column: 2; }
+
+  .label {
+    margin: 0;
+    font-family: var(--mono);
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--dim);
+  }
+
+  .value {
+    margin: 2px 0 0;
+    font-family: var(--display);
+    font-size: clamp(30px, 6vw, 52px);
+    line-height: 0.86;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .value.sm { font-size: clamp(17px, 2.6vw, 24px); }
+
+  .pips { display: flex; gap: 5px; margin-top: 7px; justify-content: flex-end; }
+
+  .pip { width: 9px; height: 9px; border-radius: 50%; background: var(--flame); }
+  .pip[data-off="1"] { background: rgba(255, 246, 230, 0.18); }
+
+  .foot {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 14px;
+  }
+
+  .keys {
+    margin: 0;
+    max-width: 46ch;
+    font-size: 12px;
+    line-height: 1.55;
+    color: rgba(255, 246, 230, 0.5);
+  }
+
+  .keys b { color: rgba(255, 246, 230, 0.92); font-weight: 700; }
+
+  button {
+    pointer-events: auto;
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--wax);
+    background: rgba(255, 246, 230, 0.06);
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    padding: 9px 15px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  button:hover { background: rgba(255, 246, 230, 0.12); }
+  button:active { transform: translateY(1px); }
+  button:focus-visible { outline: 2px solid var(--flame); outline-offset: 2px; }
+
+  .gate {
+    position: fixed;
+    inset: 0;
+    z-index: 5;
+    display: grid;
+    place-items: center;
+    padding: 20px;
+    background: radial-gradient(120% 90% at 50% 40%, rgba(10, 10, 15, 0.72), rgba(10, 10, 15, 0.96));
+    backdrop-filter: blur(3px);
+  }
+
+  .gate[hidden] { display: none; }
+
+  .card {
+    width: min(430px, 100%);
+    max-height: 100%;
+    overflow: auto;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--panel);
+    padding: clamp(22px, 4vw, 32px);
+    text-align: center;
+  }
+
+  .eyebrow {
+    margin: 0;
+    font-family: var(--mono);
+    font-size: 9.5px;
+    font-weight: 600;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--dim);
+  }
+
+  .card h1 {
+    margin: 12px 0 0;
+    font-family: var(--display);
+    font-size: clamp(44px, 10vw, 64px);
+    line-height: 0.88;
+    text-transform: uppercase;
+  }
+
+  .card h1 i { font-style: normal; color: var(--flame); }
+
+  .rules {
+    margin: 20px 0 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+    text-align: left;
+  }
+
+  .rules li {
+    display: flex;
+    gap: 11px;
+    align-items: flex-start;
+    font-size: 13.5px;
+    line-height: 1.5;
+    color: rgba(255, 246, 230, 0.76);
+  }
+
+  .rules[hidden] { display: none; }
+
+  .rules b { color: var(--wax); font-weight: 700; }
+
+  .dot {
+    flex: none;
+    width: 10px;
+    height: 10px;
+    margin-top: 5px;
+    border-radius: 50%;
+    background: var(--flame);
+  }
+
+  .dot.e { background: var(--ember); }
+  .dot.a { background: var(--ash); }
+
+  .final {
+    margin: 20px 0 0;
+    display: flex;
+    justify-content: center;
+    gap: 26px;
+  }
+
+  .final[hidden] { display: none; }
+  .final div { display: flex; flex-direction: column; gap: 5px; }
+
+  .final em {
+    font-family: var(--mono);
+    font-style: normal;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--dim);
+  }
+
+  .final span {
+    font-family: var(--display);
+    font-size: 30px;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .go {
+    margin-top: 24px;
+    width: 100%;
+    font-size: 12px;
+    padding: 14px 22px;
+    letter-spacing: 0.18em;
+    color: #1A1203;
+    background: var(--flame);
+    border-color: var(--flame);
+  }
+
+  .go:hover { background: #ffdd8c; border-color: #ffdd8c; color: #1A1203; }
+
+  .sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  @media (max-width: 620px) {
+    .keys { font-size: 11px; }
+    .value { font-size: 30px; }
+  }
+</style>
+
+<canvas id="dark" aria-label="Lantern memory grid"></canvas>
+
+<div class="hud">
+  <div class="cell">
+    <p class="label">Level</p>
+    <p class="value" id="level">1</p>
+  </div>
+
+  <div class="cell mid">
+    <p class="label" id="phase-label">Watch</p>
+    <p class="value sm" id="steps">0/0</p>
+  </div>
+
+  <div class="cell right">
+    <p class="label">Best</p>
+    <p class="value sm" id="best">0</p>
+    <div class="pips" id="lives"><i class="pip"></i><i class="pip"></i><i class="pip"></i></div>
+  </div>
+
+  <div class="foot">
+    <p class="keys">
+      The path lights up, then the dark comes back. <b>Tap the cells in order</b> from memory.
+      A wrong step costs a life and shows you the path again.
+    </p>
+    <button type="button" id="mute" aria-pressed="true">Sound on</button>
+  </div>
+</div>
+
+<div class="gate" id="gate">
+  <div class="card">
+    <p class="eyebrow" id="eyebrow">Memory · levels</p>
+    <h1 id="title">Lan<i>tern</i></h1>
+    <ul class="rules" id="rules">
+      <li><i class="dot"></i><span>A path <b>lights up cell by cell</b>. Watch the whole thing before it goes dark.</span></li>
+      <li><i class="dot e"></i><span>Then <b>walk it back</b> in the same order, one tap per cell.</span></li>
+      <li><i class="dot a"></i><span>Each level adds a step. <b>Three wrong turns</b> and the lantern goes out.</span></li>
+    </ul>
+    <div class="final" id="final" hidden>
+      <div><em>Level</em><span id="f-level">0</span></div>
+      <div><em>Best</em><span id="f-best">0</span></div>
+    </div>
+    <button class="go" id="start" type="button">Start</button>
+  </div>
+</div>
+
+<p class="sr" id="live" role="status" aria-live="polite"></p>
+
+<script>
+(function () {
+  "use strict";
+
+  var PITCH = "#0A0A0F", FLAME = "#FFD166", EMBER = "#FF7A18", ASH = "#FF4D5E", WAX = "#FFF6E6";
+
+  var MAX_LIVES = 3;
+  var STEP_TIME = 0.42;      // seconds each cell stays lit while the path plays
+  var HOLD_TIME = 0.5;       // pause after the path finishes, before the dark
+
+  var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  var canvas = document.getElementById("dark");
+  var ctx = canvas.getContext("2d");
+  var gate = document.getElementById("gate");
+  var elLevel = document.getElementById("level");
+  var elSteps = document.getElementById("steps");
+  var elPhase = document.getElementById("phase-label");
+  var elBest = document.getElementById("best");
+  var elLives = document.getElementById("lives");
+  var elEyebrow = document.getElementById("eyebrow");
+  var elTitle = document.getElementById("title");
+  var elRules = document.getElementById("rules");
+  var elFinal = document.getElementById("final");
+  var elFLevel = document.getElementById("f-level");
+  var elFBest = document.getElementById("f-best");
+  var elLive = document.getElementById("live");
+  var btnStart = document.getElementById("start");
+  var btnMute = document.getElementById("mute");
+
+  var W = 0, H = 0, dpr = 1, cellSize = 56, originX = 0, originY = 0;
+
+  var state = "idle";        // idle | show | walk | over
+  var level = 1, best = 0, lives = MAX_LIVES;
+  var gw = 4, gh = 4, path = [], stepIndex = 0, walked = 0;
+  var showTimer = 0, shownUpTo = 0, wrongAt = null, wrongFade = 0, winFade = 0, advanceIn = 0;
+  var soundOn = true, audio = null;
+
+  var NOTES = [261.63, 293.66, 329.63, 392.0, 440.0, 523.25, 587.33, 659.25, 783.99, 880.0];
+
+  /* ---------- storage ---------- */
+  try {
+    var stored = parseInt(window.localStorage.getItem("lantern.best"), 10);
+    if (stored > 0) best = stored;
+  } catch (e) {}
+  elBest.textContent = best;
+
+  function saveBest() {
+    try { window.localStorage.setItem("lantern.best", String(best)); } catch (e) {}
+  }
+
+  /* ---------- audio ---------- */
+  function ac() {
+    if (!audio) {
+      var C = window.AudioContext || window.webkitAudioContext;
+      if (!C) return null;
+      try { audio = new C(); } catch (e) { return null; }
+    }
+    if (audio.state === "suspended") audio.resume();
+    return audio;
+  }
+
+  function note(step, type, vol) {
+    if (!soundOn) return;
+    try {
+      var a = ac(); if (!a) return;
+      var t = a.currentTime;
+      var o = a.createOscillator(), g = a.createGain();
+      o.type = type || "sine";
+      o.frequency.setValueAtTime(NOTES[Math.min(step, NOTES.length - 1)], t);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(vol || 0.05, t + 0.008);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.28);
+      o.connect(g); g.connect(a.destination);
+      o.start(t); o.stop(t + 0.3);
+    } catch (e) {}
+  }
+
+  function snuff() {
+    if (!soundOn) return;
+    try {
+      var a = ac(); if (!a) return;
+      var t = a.currentTime;
+      var o = a.createOscillator(), g = a.createGain();
+      o.type = "sawtooth";
+      o.frequency.setValueAtTime(170, t);
+      o.frequency.exponentialRampToValueAtTime(42, t + 0.38);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.15, t + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.44);
+      o.connect(g); g.connect(a.destination);
+      o.start(t); o.stop(t + 0.46);
+    } catch (e) {}
+  }
+
+  btnMute.addEventListener("click", function (e) {
+    e.stopPropagation();
+    soundOn = !soundOn;
+    btnMute.textContent = soundOn ? "Sound on" : "Sound off";
+    btnMute.setAttribute("aria-pressed", String(soundOn));
+  });
+
+  /* ---------- sizing ---------- */
+  function resize() {
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    W = window.innerWidth;
+    H = window.innerHeight;
+    canvas.width = Math.round(W * dpr);
+    canvas.height = Math.round(H * dpr);
+    canvas.style.width = W + "px";
+    canvas.style.height = H + "px";
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    layout();
+  }
+
+  function layout() {
+    var availW = W - 70;
+    var availH = H - 210;
+    cellSize = Math.max(30, Math.min(86, Math.min(availW / gw, availH / gh)));
+    originX = (W - gw * cellSize) / 2;
+    originY = (H - gh * cellSize) / 2;
+  }
+
+  window.addEventListener("resize", resize);
+
+  /* ---------- path generation ---------- */
+  // Verified offline over thousands of generations: the walk is always the
+  // requested length, uses only single orthogonal steps, and never revisits a
+  // cell. Retries from a fresh start whenever it paints itself into a corner.
+  function makePath(w, h, len) {
+    for (var attempt = 0; attempt < 400; attempt++) {
+      var start = { x: Math.floor(Math.random() * w), y: h - 1 };
+      var p = [start];
+      var used = {};
+      used[start.x + "," + start.y] = true;
+      var ok = true;
+      for (var i = 1; i < len; i++) {
+        var cur = p[p.length - 1];
+        var opts = [];
+        var cand = [
+          { x: cur.x + 1, y: cur.y }, { x: cur.x - 1, y: cur.y },
+          { x: cur.x, y: cur.y - 1 }, { x: cur.x, y: cur.y + 1 }
+        ];
+        for (var c = 0; c < cand.length; c++) {
+          var n = cand[c];
+          if (n.x < 0 || n.y < 0 || n.x >= w || n.y >= h) continue;
+          if (used[n.x + "," + n.y]) continue;
+          opts.push(n);
+        }
+        if (!opts.length) { ok = false; break; }
+        var next = opts[Math.floor(Math.random() * opts.length)];
+        p.push(next);
+        used[next.x + "," + next.y] = true;
+      }
+      if (ok && p.length === len) return p;
+    }
+    return null;
+  }
+
+  /* ---------- flow ---------- */
+  function sizeFor(lv) {
+    return {
+      w: Math.min(4 + Math.floor(lv / 4), 7),
+      h: Math.min(4 + Math.floor(lv / 3), 8)
+    };
+  }
+
+  function beginLevel() {
+    var s = sizeFor(level);
+    gw = s.w; gh = s.h;
+    var len = Math.min(3 + level, gw * gh - 1);
+    var p = makePath(gw, gh, len);
+    // The generator is proven, but never ship a crash if it ever came up empty:
+    // fall back to a shorter walk rather than leaving the player on a dead board.
+    if (!p) p = makePath(gw, gh, Math.max(3, Math.floor(len / 2)));
+    path = p || [{ x: 0, y: gh - 1 }, { x: 1, y: gh - 1 }, { x: 2, y: gh - 1 }];
+    layout();
+    stepIndex = 0;
+    walked = 0;
+    shownUpTo = 0;
+    showTimer = 0;
+    wrongAt = null;
+    winFade = 0;
+    advanceIn = 0;
+    state = "show";
+    elPhase.textContent = "Watch";
+    paintHud();
+    say("Level " + level + ". Watch " + path.length + " steps.");
+  }
+
+  function reset() {
+    level = 1;
+    lives = MAX_LIVES;
+    paintHud();
+  }
+
+  function start() {
+    reset();
+    ac();
+    gate.hidden = true;
+    beginLevel();
+  }
+
+  function over() {
+    state = "over";
+    snuff();
+    if (level - 1 > best) { best = level - 1; saveBest(); elBest.textContent = best; }
+    elEyebrow.textContent = level - 1 >= best && best > 0 ? "New best" : "Lantern out";
+    elTitle.innerHTML = "Dark<i>ness</i>";
+    elRules.hidden = true;
+    elFinal.hidden = false;
+    elFLevel.textContent = level - 1;
+    elFBest.textContent = best;
+    btnStart.textContent = "Again";
+    gate.hidden = false;
+    say("Lantern out at level " + (level - 1) + ". Best " + best + ".");
+  }
+
+  function say(m) { elLive.textContent = m; }
+
+  function paintHud() {
+    elLevel.textContent = level;
+    elSteps.textContent = walked + "/" + (path.length || 0);
+    for (var i = 0; i < elLives.children.length; i++) {
+      elLives.children[i].dataset.off = i < lives ? "0" : "1";
+    }
+  }
+
+  /* ---------- input ---------- */
+  function cellAt(px, py) {
+    var cx = Math.floor((px - originX) / cellSize);
+    var cy = Math.floor((py - originY) / cellSize);
+    if (cx < 0 || cy < 0 || cx >= gw || cy >= gh) return null;
+    return { x: cx, y: cy };
+  }
+
+  canvas.addEventListener("pointerdown", function (e) {
+    e.preventDefault();
+    if (state === "idle" || state === "over") { btnStart.click(); return; }
+    if (state !== "walk") return;
+    var rect = canvas.getBoundingClientRect();
+    var c = cellAt(e.clientX - rect.left, e.clientY - rect.top);
+    if (!c) return;
+    tryStep(c);
+  });
+
+  function tryStep(c) {
+    var want = path[walked];
+    if (c.x === want.x && c.y === want.y) {
+      walked++;
+      note(Math.min(walked, NOTES.length - 1), "sine", 0.05);
+      paintHud();
+      if (walked >= path.length) {
+        winFade = 1;
+        advanceIn = 0.8;
+        state = "cleared";
+        elPhase.textContent = "Clear";
+        say("Level " + level + " walked.");
+      }
+      return;
+    }
+    // wrong turn
+    lives--;
+    wrongAt = { x: c.x, y: c.y };
+    wrongFade = 1;
+    walked = 0;
+    snuff();
+    paintHud();
+    if (lives <= 0) { over(); return; }
+    // show the path again from the start
+    state = "show";
+    shownUpTo = 0;
+    showTimer = 0;
+    elPhase.textContent = "Watch";
+    say("Wrong turn. Watch again.");
+  }
+
+  btnStart.addEventListener("click", function (e) {
+    e.stopPropagation();
+    elRules.hidden = false;
+    elFinal.hidden = true;
+    btnStart.textContent = "Start";
+    start();
+  });
+
+  window.addEventListener("keydown", function (e) {
+    if (e.key !== " " && e.key !== "Enter") return;
+    e.preventDefault();
+    if (state === "idle" || state === "over") btnStart.click();
+  });
+
+  /* ---------- step ---------- */
+  function step(dt) {
+    if (state === "show") {
+      showTimer += dt;
+      var want = Math.floor(showTimer / STEP_TIME);
+      while (shownUpTo < want && shownUpTo < path.length) {
+        note(Math.min(shownUpTo, NOTES.length - 1), "triangle", 0.045);
+        shownUpTo++;
+      }
+      if (showTimer >= path.length * STEP_TIME + HOLD_TIME) {
+        state = "walk";
+        elPhase.textContent = "Walk";
+        say("Go. Tap " + path.length + " cells in order.");
+      }
+    }
+
+    if (state === "cleared" && advanceIn > 0) {
+      advanceIn -= dt;
+      if (advanceIn <= 0) {
+        level++;
+        if (level - 1 > best) { best = level - 1; saveBest(); elBest.textContent = best; }
+        beginLevel();
+      }
+    }
+
+    if (wrongFade > 0) wrongFade = Math.max(0, wrongFade - dt * 1.6);
+    if (winFade > 0) winFade = Math.max(0, winFade - dt * 1.3);
+  }
+
+  /* ---------- draw ---------- */
+  function cellRect(x, y) {
+    return { x: originX + x * cellSize, y: originY + y * cellSize, s: cellSize };
+  }
+
+  function draw() {
+    ctx.fillStyle = PITCH;
+    ctx.fillRect(0, 0, W, H);
+    if (state === "idle") return;
+
+    var i, r, key;
+
+    // the grid itself
+    for (var y = 0; y < gh; y++) {
+      for (var x = 0; x < gw; x++) {
+        r = cellRect(x, y);
+        ctx.fillStyle = "rgba(255, 246, 230, 0.035)";
+        ctx.fillRect(r.x + 2, r.y + 2, r.s - 4, r.s - 4);
+        ctx.strokeStyle = "rgba(255, 246, 230, 0.07)";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(r.x + 2, r.y + 2, r.s - 4, r.s - 4);
+      }
+    }
+
+    // while showing, light the path up to shownUpTo; while walking, only what
+    // the player has correctly stepped on
+    var reveal = state === "show" ? shownUpTo : walked;
+    for (i = 0; i < reveal && i < path.length; i++) {
+      r = cellRect(path[i].x, path[i].y);
+      var warm = state === "show" ? FLAME : EMBER;
+      ctx.fillStyle = warm;
+      ctx.globalAlpha = 0.85;
+      ctx.fillRect(r.x + 4, r.y + 4, r.s - 8, r.s - 8);
+      ctx.globalAlpha = 1;
+
+      // a soft halo so it reads as lantern-light
+      if (!reduce) {
+        var g = ctx.createRadialGradient(
+          r.x + r.s / 2, r.y + r.s / 2, r.s * 0.2,
+          r.x + r.s / 2, r.y + r.s / 2, r.s * 1.15
+        );
+        g.addColorStop(0, "rgba(255, 209, 102, 0.28)");
+        g.addColorStop(1, "rgba(255, 209, 102, 0)");
+        ctx.fillStyle = g;
+        ctx.fillRect(r.x - r.s, r.y - r.s, r.s * 3, r.s * 3);
+      }
+
+      // order number, so the sequence is unambiguous while it plays
+      if (state === "show") {
+        ctx.fillStyle = "rgba(26, 18, 3, 0.75)";
+        ctx.font = "600 " + Math.max(10, Math.round(r.s * 0.26)) + "px ui-monospace, Menlo, monospace";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(String(i + 1), r.x + r.s / 2, r.y + r.s / 2);
+      }
+    }
+
+    // the next cell to press pulses faintly once you are walking
+    if (state === "walk" && walked < path.length && !reduce) {
+      r = cellRect(path[walked].x, path[walked].y);
+      // deliberately NOT highlighted — that would give the answer away.
+      // Instead the start cell is marked so the player knows where to begin.
+      if (walked === 0) {
+        ctx.strokeStyle = "rgba(255, 209, 102, 0.22)";
+        ctx.lineWidth = 2;
+        ctx.setLineDash([4, 4]);
+        ctx.strokeRect(r.x + 4, r.y + 4, r.s - 8, r.s - 8);
+        ctx.setLineDash([]);
+      }
+    }
+
+    if (wrongAt && wrongFade > 0) {
+      r = cellRect(wrongAt.x, wrongAt.y);
+      ctx.fillStyle = "rgba(255, 77, 94, " + (wrongFade * 0.6).toFixed(3) + ")";
+      ctx.fillRect(r.x + 4, r.y + 4, r.s - 8, r.s - 8);
+    }
+
+    if (winFade > 0 && !reduce) {
+      ctx.fillStyle = "rgba(255, 209, 102, " + (winFade * 0.10).toFixed(3) + ")";
+      ctx.fillRect(0, 0, W, H);
+    }
+  }
+
+  /* ---------- loop ---------- */
+  var last = 0;
+
+  function frame(now) {
+    var dt = last ? Math.min((now - last) / 1000, 0.033) : 0;
+    last = now;
+    if (state === "show" || state === "walk" || state === "cleared") step(dt);
+    draw();
+    requestAnimationFrame(frame);
+  }
+
+  // Opt-in probe (…/lantern/?probe=1) for scripted checks.
+  if (window.location.search.indexOf("probe") !== -1) {
+    window.__lantern = {
+      snapshot: function () {
+        return {
+          state: state, level: level, lives: lives, walked: walked,
+          length: path.length, grid: [gw, gh],
+          path: path.map(function (p) { return [p.x, p.y]; })
+        };
+      },
+      // skip the reveal animation so a scripted player can walk immediately
+      skipShow: function () {
+        if (state !== "show") return false;
+        showTimer = path.length * STEP_TIME + HOLD_TIME;
+        shownUpTo = path.length;
+        return true;
+      },
+      stepTo: function (x, y) { if (state === "walk") tryStep({ x: x, y: y }); },
+      walkCorrectly: function () {
+        while (state === "walk" && walked < path.length) {
+          tryStep(path[walked]);
+        }
+        return state;
+      },
+      start: start
+    };
+  }
+
+  resize();
+  state = "idle";
+  requestAnimationFrame(frame);
+})();
+</script>

@@ -5,12 +5,20 @@ its own indexable URL; the site around it is a Next.js app exported to plain sta
 
 Live games:
 
-| Game | Route | Source |
-| --- | --- | --- |
-| Flipshield | `/games/flipshield/` | `games-src/flipshield.html` |
-| Chain Bloom | `/games/chain-bloom/` | `games-src/chain-bloom.html` |
-| Slingline | `/games/slingline/` | `games-src/slingline.html` |
-| Longwave | `/games/longwave/` | `games-src/longwave.html` |
+| Game | Genre | Route | Source |
+| --- | --- | --- | --- |
+| Flipshield | Reflex | `/games/flipshield/` | `games-src/flipshield.html` |
+| Chain Bloom | Chain reaction | `/games/chain-bloom/` | `games-src/chain-bloom.html` |
+| Slingline | Momentum | `/games/slingline/` | `games-src/slingline.html` |
+| Longwave | Idle | `/games/longwave/` | `games-src/longwave.html` |
+| Refract | Puzzle | `/games/refract/` | `games-src/refract.html` |
+| Nocturne | Rhythm | `/games/nocturne/` | `games-src/nocturne.html` |
+| Ballast | Physics | `/games/ballast/` | `games-src/ballast.html` |
+| Telegraph | Typing | `/games/telegraph/` | `games-src/telegraph.html` |
+| Lantern | Memory | `/games/lantern/` | `games-src/lantern.html` |
+
+No two of them share a verb: aim-and-flip, one click, hold-and-release, wait, rotate,
+tap-on-beat, drop, type, remember.
 
 ## Running it
 
@@ -70,16 +78,51 @@ means changing the site's URL is a rebuild, not a hand-edit of every game page.
    node scripts/capture-thumbs.mjs http://localhost:3000
    ```
    Add a recipe in the script if the game needs specific clicks to reach a good frame.
+   Set `CHROME_PATH` if Playwright's bundled browser revision isn't the one on disk.
 
 The generated PNGs are committed, so `npm run build` never needs the network.
 
+## Testing a game
+
+```bash
+npm run build && npm run serve       # in another shell
+npm run test:games http://localhost:3000
+```
+
+`scripts/test-games.mjs` drives all nine games in a real browser: every page loads without
+JS errors, Refract's twelve levels are re-solved, Ballast's difficulty separation is
+measured, Nocturne's on-time hits are scored, Telegraph clears typed words, Lantern's
+generated paths are validated, and the home grid and sitemap are checked. 26 checks.
+
+Each game exposes a read-only probe under `?probe=1` — absent from a normal page load —
+which is how the games are driven headlessly. `window.__<slug>` gives a `snapshot()` plus
+whatever inputs that game needs (`__refract.flip`, `__ballast.dropAt`, `__lantern.walkCorrectly`,
+`__telegraph.type`, `__nocturne.judge`, …). That is enough to assert real behaviour rather
+than just "the page loaded":
+
+- Refract's twelve levels are **generated offline and proved solvable** by exhaustive search
+  over all 2^n mirror configurations, with none solvable as it starts. The browser test
+  re-solves all twelve.
+- Ballast's constants were tuned by simulating thousands of runs at three skill levels.
+  Expert play averages ~42 crates, loose play ~25, mashing ~12, and **no run is endless**.
+  The carriage's travel widens with score so an opening drop can never be instantly fatal.
+- Lantern's path generator is checked for single orthogonal steps, no revisits and in-bounds
+  cells on every level it produces.
+- Nocturne judges against the **AudioContext clock**, chosen once per run and held —
+  `performance.now()` and `audio.currentTime` have different origins, so switching source
+  mid-run would reinterpret every scheduled beat.
+
 ## Deploying (Cloudflare Pages)
+
+**Connected.** The repo builds on Cloudflare Pages as the project `quickplay-games`, so
+every push gets a deployment and every pull request a branch preview at
+`https://<branch>.quickplay-games.pages.dev`.
 
 Pages was picked over Vercel for the free tier's unmetered bandwidth and requests — a game
 going viral shouldn't be able to produce a bill or a throttle.
 
-Connect the repo at [dash.cloudflare.com](https://dash.cloudflare.com) → Workers & Pages →
-Create → Pages → Connect to Git, then:
+It was connected at [dash.cloudflare.com](https://dash.cloudflare.com) → Workers & Pages →
+Create → Pages → Connect to Git, with these settings:
 
 | Setting | Value |
 | --- | --- |
@@ -103,13 +146,26 @@ All optional — the site builds and runs with none of them set.
 
 | Variable | Effect |
 | --- | --- |
-| `NEXT_PUBLIC_SITE_URL` | Canonical/OG/sitemap base URL. Only needed for a custom domain — on Cloudflare Pages the build derives `https://<project>.pages.dev` from `CF_PAGES_URL`, and outside Cloudflare it falls back to `https://quickplay.pages.dev`. |
+| `NEXT_PUBLIC_SITE_URL` | Canonical/OG/sitemap base URL. Only needed for a custom domain — on Cloudflare Pages the build derives `https://<project>.pages.dev` from `CF_PAGES_URL`, and outside Cloudflare it falls back to `https://quickplay-games.pages.dev`, matching the connected Pages project. |
 | `NEXT_PUBLIC_CF_BEACON_TOKEN` | Adds the Cloudflare Web Analytics beacon. Not needed on Cloudflare Pages — enabling Web Analytics on the project injects it into every page, including the static game pages. |
 | `NEXT_PUBLIC_ADSENSE_CLIENT` | AdSense publisher id (`ca-pub-…`). Until it is set, `components/ad-slot.tsx` renders nothing, so no empty ad boxes appear during the AdSense review. |
 
+## The Lovable app
+
+There is a parallel QuickPlay project on Lovable (React + TanStack Router + Tailwind,
+Supabase-backed) holding the same nine-game registry, the design system, the routing and a
+canvas game harness — but **no games**: the free-plan credits ran out before any could be
+built, so every route there is still a placeholder. Its database is real and provisioned:
+a `scores` table with RLS on, public read, public insert constrained to the nine known
+slugs with score and name bounds, and no update or delete policy at all.
+
+It is not wired to this repo and nothing here depends on it. To take it further, add credits
+and port the game logic from `games-src/` — the probe APIs above make each game's rules
+explicit enough to port without re-deriving them. Note that client-submitted scores are
+spoofable by anyone with devtools; the constraints stop accidental garbage, not cheating.
+
 ## What still needs a human
 
-- Connect the repo to Cloudflare Pages (needs the Cloudflare account) with the settings above.
 - Switch the repository's default branch to `main` in GitHub → Settings → General. Not
   required for the deploy, but PRs and clones still point at the planning branch until it
   is changed.

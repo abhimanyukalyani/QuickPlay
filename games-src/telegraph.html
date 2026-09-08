@@ -1,0 +1,777 @@
+<title>Telegraph</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Chivo:wght@400;700;900&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+  :root {
+    --deep: #04101A;
+    --panel: rgba(5, 18, 30, 0.94);
+    --line: rgba(230, 248, 255, 0.12);
+    --line-strong: rgba(230, 248, 255, 0.26);
+    --frost: #E6F8FF;
+    --dim: #6F8FA6;
+    --wire: #5BE8FF;
+    --lime: #A8FF60;
+    --red: #FF5470;
+
+    --display: "Anton", "Haettenschweiler", "Arial Narrow", sans-serif;
+    --body: "Chivo", "Helvetica Neue", Arial, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+
+  body {
+    margin: 0;
+    background: var(--deep);
+    color: var(--frost);
+    font-family: var(--body);
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  #wire {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    touch-action: manipulation;
+  }
+
+  /* Off-screen but focusable, so tapping the board raises the mobile keyboard. */
+  #sink {
+    position: fixed;
+    top: 0;
+    left: -9999px;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+  }
+
+  .hud {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    padding: 52px clamp(12px, 2.2vw, 26px) clamp(12px, 2.2vw, 26px);
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    grid-template-rows: auto 1fr auto;
+    gap: 10px;
+  }
+
+  .cell { display: flex; flex-direction: column; gap: 3px; }
+  .cell.right { align-items: flex-end; text-align: right; }
+  .cell.mid { align-items: center; text-align: center; grid-column: 2; }
+
+  .label {
+    margin: 0;
+    font-family: var(--mono);
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--dim);
+  }
+
+  .value {
+    margin: 2px 0 0;
+    font-family: var(--display);
+    font-size: clamp(30px, 6vw, 52px);
+    line-height: 0.86;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .value.sm { font-size: clamp(17px, 2.6vw, 24px); }
+
+  .pips { display: flex; gap: 5px; margin-top: 7px; justify-content: flex-end; }
+
+  .pip { width: 9px; height: 9px; border-radius: 50%; background: var(--wire); }
+  .pip[data-off="1"] { background: rgba(230, 248, 255, 0.18); }
+
+  .foot {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 14px;
+  }
+
+  .keys {
+    margin: 0;
+    max-width: 46ch;
+    font-size: 12px;
+    line-height: 1.55;
+    color: rgba(230, 248, 255, 0.5);
+  }
+
+  .keys b { color: rgba(230, 248, 255, 0.92); font-weight: 700; }
+
+  button {
+    pointer-events: auto;
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--frost);
+    background: rgba(230, 248, 255, 0.06);
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    padding: 9px 15px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  button:hover { background: rgba(230, 248, 255, 0.12); }
+  button:active { transform: translateY(1px); }
+  button:focus-visible { outline: 2px solid var(--lime); outline-offset: 2px; }
+
+  .gate {
+    position: fixed;
+    inset: 0;
+    z-index: 5;
+    display: grid;
+    place-items: center;
+    padding: 20px;
+    background: radial-gradient(120% 90% at 50% 40%, rgba(4, 16, 26, 0.72), rgba(4, 16, 26, 0.96));
+    backdrop-filter: blur(3px);
+  }
+
+  .gate[hidden] { display: none; }
+
+  .card {
+    width: min(430px, 100%);
+    max-height: 100%;
+    overflow: auto;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--panel);
+    padding: clamp(22px, 4vw, 32px);
+    text-align: center;
+  }
+
+  .eyebrow {
+    margin: 0;
+    font-family: var(--mono);
+    font-size: 9.5px;
+    font-weight: 600;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--dim);
+  }
+
+  .card h1 {
+    margin: 12px 0 0;
+    font-family: var(--display);
+    font-size: clamp(40px, 9vw, 58px);
+    line-height: 0.88;
+    text-transform: uppercase;
+  }
+
+  .card h1 i { font-style: normal; color: var(--wire); }
+
+  .rules {
+    margin: 20px 0 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+    text-align: left;
+  }
+
+  .rules li {
+    display: flex;
+    gap: 11px;
+    align-items: flex-start;
+    font-size: 13.5px;
+    line-height: 1.5;
+    color: rgba(230, 248, 255, 0.76);
+  }
+
+  .rules[hidden] { display: none; }
+
+  .rules b { color: var(--frost); font-weight: 700; }
+
+  .dot {
+    flex: none;
+    width: 10px;
+    height: 10px;
+    margin-top: 5px;
+    border-radius: 50%;
+    background: var(--wire);
+  }
+
+  .dot.l { background: var(--lime); }
+  .dot.r { background: var(--red); }
+
+  .final {
+    margin: 20px 0 0;
+    display: flex;
+    justify-content: center;
+    gap: 22px;
+  }
+
+  .final[hidden] { display: none; }
+  .final div { display: flex; flex-direction: column; gap: 5px; }
+
+  .final em {
+    font-family: var(--mono);
+    font-style: normal;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--dim);
+  }
+
+  .final span {
+    font-family: var(--display);
+    font-size: 28px;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .go {
+    margin-top: 24px;
+    width: 100%;
+    font-size: 12px;
+    padding: 14px 22px;
+    letter-spacing: 0.18em;
+    color: #03141C;
+    background: var(--wire);
+    border-color: var(--wire);
+  }
+
+  .go:hover { background: #8bf0ff; border-color: #8bf0ff; color: #03141C; }
+
+  .sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  @media (max-width: 620px) {
+    .keys { font-size: 11px; }
+    .value { font-size: 30px; }
+  }
+</style>
+
+<canvas id="wire" aria-label="Telegraph incoming words"></canvas>
+<input id="sink" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-label="Type the incoming word">
+
+<div class="hud">
+  <div class="cell">
+    <p class="label">Sent</p>
+    <p class="value" id="score">0</p>
+  </div>
+
+  <div class="cell mid">
+    <p class="label">Words / min</p>
+    <p class="value sm" id="wpm">0</p>
+  </div>
+
+  <div class="cell right">
+    <p class="label">Best</p>
+    <p class="value sm" id="best">0</p>
+    <div class="pips" id="lives"><i class="pip"></i><i class="pip"></i><i class="pip"></i></div>
+  </div>
+
+  <div class="foot">
+    <p class="keys">
+      Words run down the wire. <b>Type one</b> and press nothing — it clears on the last letter.
+      Let three reach the end and the line goes dead.
+    </p>
+    <button type="button" id="mute" aria-pressed="true">Sound on</button>
+  </div>
+</div>
+
+<div class="gate" id="gate">
+  <div class="card">
+    <p class="eyebrow" id="eyebrow">Typing · endless</p>
+    <h1 id="title">Tele<i>graph</i></h1>
+    <ul class="rules" id="rules">
+      <li><i class="dot"></i><span><b>Type the word</b> you want to clear. Matching letters light up as you go.</span></li>
+      <li><i class="dot l"></i><span>Finish a word and it <b>fires off the wire</b>. Longer words are worth more.</span></li>
+      <li><i class="dot r"></i><span>A word that reaches the <b>far end</b> costs a life. Three and it is over.</span></li>
+    </ul>
+    <div class="final" id="final" hidden>
+      <div><em>Sent</em><span id="f-score">0</span></div>
+      <div><em>WPM</em><span id="f-wpm">0</span></div>
+      <div><em>Best</em><span id="f-best">0</span></div>
+    </div>
+    <button class="go" id="start" type="button">Start</button>
+  </div>
+</div>
+
+<p class="sr" id="live" role="status" aria-live="polite"></p>
+
+<script>
+(function () {
+  "use strict";
+
+  var DEEP = "#04101A", WIRE = "#5BE8FF", LIME = "#A8FF60", RED = "#FF5470", FROST = "#E6F8FF";
+
+  var WORDS = [
+    "signal", "relay", "cable", "morse", "dash", "dot", "line", "wire", "pulse", "key",
+    "station", "beacon", "coast", "night", "storm", "north", "harbour", "anchor", "drift",
+    "current", "static", "silent", "listen", "answer", "message", "sender", "receipt",
+    "urgent", "delay", "repeat", "confirm", "position", "bearing", "fathom", "channel",
+    "ether", "spark", "coil", "tower", "mast", "watch", "log", "chart", "tide", "gale",
+    "port", "vessel", "convoy", "cipher", "code", "plain", "text", "word", "letter",
+    "figure", "number", "count", "second", "minute", "hour", "dawn", "dusk", "grey",
+    "clear", "faint", "strong", "weak", "steady", "break", "over", "out", "roger",
+    "wilco", "stand", "by", "ready", "sending", "hold", "fast", "slow", "quick"
+  ];
+
+  var LOST_X = 0.14;         // fraction of the width where a word is lost
+  var MAX_LIVES = 3;
+
+  var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  var canvas = document.getElementById("wire");
+  var ctx = canvas.getContext("2d");
+  var sink = document.getElementById("sink");
+  var gate = document.getElementById("gate");
+  var elScore = document.getElementById("score");
+  var elWpm = document.getElementById("wpm");
+  var elBest = document.getElementById("best");
+  var elLives = document.getElementById("lives");
+  var elEyebrow = document.getElementById("eyebrow");
+  var elTitle = document.getElementById("title");
+  var elRules = document.getElementById("rules");
+  var elFinal = document.getElementById("final");
+  var elFScore = document.getElementById("f-score");
+  var elFWpm = document.getElementById("f-wpm");
+  var elFBest = document.getElementById("f-best");
+  var elLive = document.getElementById("live");
+  var btnStart = document.getElementById("start");
+  var btnMute = document.getElementById("mute");
+
+  var W = 0, H = 0, dpr = 1;
+
+  var state = "idle";        // idle | play | over
+  var words = [], sparks = [];
+  var typed = "";
+  var score = 0, best = 0, lives = MAX_LIVES, letters = 0, elapsed = 0, spawnTimer = 0;
+  var shake = 0, flash = 0, flashCol = WIRE;
+  var soundOn = true, audio = null;
+
+  var NOTES = [329.63, 392.0, 440.0, 493.88, 587.33, 659.25, 783.99, 880.0];
+
+  /* ---------- storage ---------- */
+  try {
+    var stored = parseInt(window.localStorage.getItem("telegraph.best"), 10);
+    if (stored > 0) best = stored;
+  } catch (e) {}
+  elBest.textContent = best;
+
+  function saveBest() {
+    try { window.localStorage.setItem("telegraph.best", String(best)); } catch (e) {}
+  }
+
+  /* ---------- audio ---------- */
+  function ac() {
+    if (!audio) {
+      var C = window.AudioContext || window.webkitAudioContext;
+      if (!C) return null;
+      try { audio = new C(); } catch (e) { return null; }
+    }
+    if (audio.state === "suspended") audio.resume();
+    return audio;
+  }
+
+  function blip(step, type, vol) {
+    if (!soundOn) return;
+    try {
+      var a = ac(); if (!a) return;
+      var t = a.currentTime;
+      var o = a.createOscillator(), g = a.createGain();
+      o.type = type || "square";
+      o.frequency.setValueAtTime(NOTES[Math.min(step, NOTES.length - 1)], t);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(vol || 0.03, t + 0.005);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.09);
+      o.connect(g); g.connect(a.destination);
+      o.start(t); o.stop(t + 0.11);
+    } catch (e) {}
+  }
+
+  function buzz() {
+    if (!soundOn) return;
+    try {
+      var a = ac(); if (!a) return;
+      var t = a.currentTime;
+      var o = a.createOscillator(), g = a.createGain();
+      o.type = "sawtooth";
+      o.frequency.setValueAtTime(150, t);
+      o.frequency.exponentialRampToValueAtTime(52, t + 0.3);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.15, t + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.36);
+      o.connect(g); g.connect(a.destination);
+      o.start(t); o.stop(t + 0.38);
+    } catch (e) {}
+  }
+
+  btnMute.addEventListener("click", function (e) {
+    e.stopPropagation();
+    soundOn = !soundOn;
+    btnMute.textContent = soundOn ? "Sound on" : "Sound off";
+    btnMute.setAttribute("aria-pressed", String(soundOn));
+    focusSink();
+  });
+
+  /* ---------- sizing ---------- */
+  function resize() {
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    W = window.innerWidth;
+    H = window.innerHeight;
+    canvas.width = Math.round(W * dpr);
+    canvas.height = Math.round(H * dpr);
+    canvas.style.width = W + "px";
+    canvas.style.height = H + "px";
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  window.addEventListener("resize", resize);
+
+  /* ---------- difficulty ---------- */
+  function speed() { return Math.min(150, 34 + elapsed * 0.85); }        // px per second
+  function spawnGap() { return Math.max(0.85, 2.5 - elapsed * 0.022); }
+
+  function pickWord() {
+    // longer words appear as the run goes on
+    var cap = Math.min(WORDS.length, 20 + Math.floor(elapsed * 1.2));
+    var pool = WORDS.slice(0, cap);
+    return pool[Math.floor(Math.random() * pool.length)];
+  }
+
+  /* ---------- flow ---------- */
+  function reset() {
+    words = []; sparks = []; typed = "";
+    score = 0; lives = MAX_LIVES; letters = 0; elapsed = 0; spawnTimer = 0.4;
+    shake = 0; flash = 0;
+    paintHud();
+  }
+
+  function start() {
+    reset();
+    ac();
+    state = "play";
+    gate.hidden = true;
+    focusSink();
+    say("Started. Type the words as they come in.");
+  }
+
+  function over() {
+    state = "over";
+    buzz();
+    var w = wpm();
+    if (score > best) { best = score; saveBest(); elBest.textContent = best; }
+    elEyebrow.textContent = score >= best && score > 0 ? "New best" : "Line dead";
+    elTitle.innerHTML = "Sil<i>ence</i>";
+    elRules.hidden = true;
+    elFinal.hidden = false;
+    elFScore.textContent = score;
+    elFWpm.textContent = w;
+    elFBest.textContent = best;
+    btnStart.textContent = "Again";
+    gate.hidden = false;
+    sink.blur();
+    say("Line dead. " + score + " words sent at " + w + " words per minute.");
+  }
+
+  function say(m) { elLive.textContent = m; }
+
+  function wpm() {
+    if (elapsed < 1) return 0;
+    // the standard: five characters counts as one word
+    return Math.round((letters / 5) / (elapsed / 60));
+  }
+
+  function paintHud() {
+    elScore.textContent = score;
+    elWpm.textContent = wpm();
+    for (var i = 0; i < elLives.children.length; i++) {
+      elLives.children[i].dataset.off = i < lives ? "0" : "1";
+    }
+  }
+
+  function focusSink() {
+    if (state !== "play") return;
+    try { sink.focus({ preventScroll: true }); } catch (e) { sink.focus(); }
+  }
+
+  function spawn() {
+    var text = pickWord();
+    var lane = words.length ? (words[words.length - 1].lane + 1) % 5 : Math.floor(Math.random() * 5);
+    words.push({ text: text, x: W + 40, lane: lane, dead: false });
+  }
+
+  function burst(x, y, colour, n) {
+    if (reduce) return;
+    for (var i = 0; i < n; i++) {
+      var a = Math.random() * Math.PI * 2;
+      var s = 60 + Math.random() * 180;
+      sparks.push({ x: x, y: y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 0.35 + Math.random() * 0.3, age: 0, c: colour });
+    }
+  }
+
+  function laneY(lane) {
+    var top = H * 0.26, span = H * 0.42;
+    return top + (span / 4) * lane;
+  }
+
+  /* ---------- typing ---------- */
+  // The active word is the furthest-left one whose text starts with what has
+  // been typed, so overlapping prefixes always resolve to the most urgent word.
+  function activeWord() {
+    var found = null;
+    for (var i = 0; i < words.length; i++) {
+      var w = words[i];
+      if (w.dead) continue;
+      if (typed.length && w.text.indexOf(typed) !== 0) continue;
+      if (!found || w.x < found.x) found = w;
+    }
+    return found;
+  }
+
+  function typeChar(ch) {
+    if (state !== "play") return;
+    var next = typed + ch;
+    var match = null;
+    for (var i = 0; i < words.length; i++) {
+      var w = words[i];
+      if (w.dead) continue;
+      if (w.text.indexOf(next) !== 0) continue;
+      if (!match || w.x < match.x) match = w;
+    }
+    if (!match) {
+      // a wrong letter only resets the buffer — it never costs a life
+      typed = "";
+      if (!reduce) { flash = 0.14; flashCol = RED; }
+      blip(0, "sine", 0.02);
+      return;
+    }
+    typed = next;
+    letters++;
+    blip(Math.min(typed.length, 7), "square", 0.026);
+    if (typed === match.text) {
+      match.dead = true;
+      score++;
+      typed = "";
+      burst(match.x, laneY(match.lane), LIME, 12);
+      if (!reduce) { flash = 0.2; flashCol = LIME; }
+      blip(7, "triangle", 0.05);
+      paintHud();
+    }
+  }
+
+  window.addEventListener("keydown", function (e) {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (state !== "play") {
+      if (e.key === " " || e.key === "Enter") { e.preventDefault(); btnStart.click(); }
+      return;
+    }
+    if (e.key === "Backspace") { e.preventDefault(); typed = typed.slice(0, -1); return; }
+    if (e.key === "Escape") { typed = ""; return; }
+    if (e.key.length !== 1) return;
+    var ch = e.key.toLowerCase();
+    if (ch < "a" || ch > "z") return;
+    e.preventDefault();
+    typeChar(ch);
+  });
+
+  // Mobile: the hidden input receives the soft keyboard. Read whatever it
+  // gained and feed it through the same path, then clear it.
+  sink.addEventListener("input", function () {
+    var v = sink.value.toLowerCase();
+    sink.value = "";
+    for (var i = 0; i < v.length; i++) {
+      var ch = v.charAt(i);
+      if (ch >= "a" && ch <= "z") typeChar(ch);
+    }
+  });
+
+  canvas.addEventListener("pointerdown", function (e) {
+    if (state === "idle" || state === "over") { btnStart.click(); return; }
+    e.preventDefault();
+    focusSink();
+  });
+
+  btnStart.addEventListener("click", function (e) {
+    e.stopPropagation();
+    elRules.hidden = false;
+    elFinal.hidden = true;
+    btnStart.textContent = "Start";
+    start();
+  });
+
+  /* ---------- step ---------- */
+  function step(dt) {
+    elapsed += dt;
+    spawnTimer -= dt;
+    if (spawnTimer <= 0) { spawn(); spawnTimer = spawnGap(); }
+
+    var lost = W * LOST_X;
+    for (var i = words.length - 1; i >= 0; i--) {
+      var w = words[i];
+      if (w.dead) { words.splice(i, 1); continue; }
+      w.x -= speed() * dt;
+      if (w.x <= lost) {
+        words.splice(i, 1);
+        if (typed.length && w.text.indexOf(typed) === 0) typed = "";
+        lives--;
+        shake = reduce ? 0 : 12;
+        if (!reduce) { flash = 0.3; flashCol = RED; }
+        buzz();
+        paintHud();
+        if (lives <= 0) { over(); return; }
+      }
+    }
+
+    for (var s = sparks.length - 1; s >= 0; s--) {
+      var sp = sparks[s];
+      sp.age += dt;
+      sp.x += sp.vx * dt; sp.y += sp.vy * dt;
+      sp.vx *= 0.93; sp.vy *= 0.93;
+      if (sp.age >= sp.life) sparks.splice(s, 1);
+    }
+
+    if (shake > 0) shake = Math.max(0, shake - dt * 30);
+    if (flash > 0) flash = Math.max(0, flash - dt * 3);
+    paintHud();
+  }
+
+  /* ---------- draw ---------- */
+  function draw() {
+    ctx.save();
+    if (shake > 0) ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
+
+    ctx.fillStyle = DEEP;
+    ctx.fillRect(0, 0, W, H);
+
+    var lostX = W * LOST_X;
+
+    // the wire lanes
+    ctx.strokeStyle = "rgba(230, 248, 255, 0.06)";
+    ctx.lineWidth = 1;
+    for (var l = 0; l < 5; l++) {
+      var y = laneY(l);
+      ctx.beginPath();
+      ctx.moveTo(0, y + 6);
+      ctx.lineTo(W, y + 6);
+      ctx.stroke();
+    }
+
+    // the dead line
+    ctx.strokeStyle = "rgba(255, 84, 112, 0.45)";
+    ctx.lineWidth = 2;
+    ctx.setLineDash([5, 6]);
+    ctx.beginPath();
+    ctx.moveTo(lostX, H * 0.2);
+    ctx.lineTo(lostX, H * 0.74);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    var active = activeWord();
+
+    ctx.font = "600 21px ui-monospace, Menlo, monospace";
+    ctx.textAlign = "left";
+    ctx.textBaseline = "alphabetic";
+
+    for (var i = 0; i < words.length; i++) {
+      var w = words[i];
+      var y = laneY(w.lane);
+      var urgency = Math.max(0, 1 - (w.x - lostX) / (W * 0.4));
+      var isActive = active === w && typed.length > 0;
+      var matched = isActive ? typed.length : 0;
+
+      if (isActive) {
+        ctx.fillStyle = LIME;
+        ctx.fillText(w.text.slice(0, matched), w.x, y);
+        var offset = ctx.measureText(w.text.slice(0, matched)).width;
+        ctx.fillStyle = FROST;
+        ctx.fillText(w.text.slice(matched), w.x + offset, y);
+      } else {
+        ctx.fillStyle = urgency > 0.55
+          ? "rgba(255, 84, 112, " + (0.6 + urgency * 0.4).toFixed(3) + ")"
+          : "rgba(230, 248, 255, 0.86)";
+        ctx.fillText(w.text, w.x, y);
+      }
+    }
+
+    for (var s = 0; s < sparks.length; s++) {
+      var sp = sparks[s];
+      var f = 1 - sp.age / sp.life;
+      ctx.globalAlpha = Math.max(0, f);
+      ctx.fillStyle = sp.c;
+      ctx.beginPath();
+      ctx.arc(sp.x, sp.y, 2.2 * f + 0.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    // what has been typed so far
+    if (state === "play") {
+      ctx.font = "600 15px ui-monospace, Menlo, monospace";
+      ctx.textAlign = "center";
+      ctx.fillStyle = typed ? WIRE : "rgba(230, 248, 255, 0.22)";
+      ctx.fillText(typed || "type…", W / 2, H * 0.82);
+    }
+
+    if (flash > 0 && !reduce) {
+      ctx.fillStyle = flashCol === LIME
+        ? "rgba(168, 255, 96, " + (flash * 0.12).toFixed(3) + ")"
+        : "rgba(255, 84, 112, " + (flash * 0.16).toFixed(3) + ")";
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    ctx.restore();
+  }
+
+  /* ---------- loop ---------- */
+  var last = 0;
+
+  function frame(now) {
+    var dt = last ? Math.min((now - last) / 1000, 0.033) : 0;
+    last = now;
+    if (state === "play") step(dt);
+    draw();
+    requestAnimationFrame(frame);
+  }
+
+  // Opt-in probe (…/telegraph/?probe=1) for scripted checks.
+  if (window.location.search.indexOf("probe") !== -1) {
+    window.__telegraph = {
+      snapshot: function () {
+        return {
+          state: state, score: score, lives: lives, typed: typed,
+          wpm: wpm(), elapsed: +elapsed.toFixed(2),
+          words: words.map(function (w) { return { text: w.text, x: Math.round(w.x) }; })
+        };
+      },
+      type: function (s) { for (var i = 0; i < s.length; i++) typeChar(s.charAt(i)); },
+      // clear the left-most word, whatever it is
+      clearFirst: function () {
+        var t = null;
+        for (var i = 0; i < words.length; i++) if (!words[i].dead && (!t || words[i].x < t.x)) t = words[i];
+        if (!t) return null;
+        typed = "";
+        for (var j = 0; j < t.text.length; j++) typeChar(t.text.charAt(j));
+        return t.text;
+      },
+      start: start
+    };
+  }
+
+  resize();
+  state = "idle";
+  requestAnimationFrame(frame);
+})();
+</script>

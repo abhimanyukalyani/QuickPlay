@@ -1,0 +1,806 @@
+<title>Nocturne</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Chivo:wght@400;700;900&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+  :root {
+    --night: #0B0618;
+    --panel: rgba(14, 8, 30, 0.94);
+    --line: rgba(246, 240, 255, 0.12);
+    --line-strong: rgba(246, 240, 255, 0.26);
+    --pearl: #F6F0FF;
+    --dim: #9182B8;
+    --rose: #FF3B6B;
+    --indigo: #7C5CFF;
+    --mint: #5BE8B0;
+
+    --display: "Anton", "Haettenschweiler", "Arial Narrow", sans-serif;
+    --body: "Chivo", "Helvetica Neue", Arial, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+
+  body {
+    margin: 0;
+    background: var(--night);
+    color: var(--pearl);
+    font-family: var(--body);
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  #stage {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    touch-action: none;
+    cursor: pointer;
+  }
+
+  .hud {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    padding: 52px clamp(12px, 2.2vw, 26px) clamp(12px, 2.2vw, 26px);
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    grid-template-rows: auto 1fr auto;
+    gap: 10px;
+  }
+
+  .cell { display: flex; flex-direction: column; gap: 3px; }
+  .cell.right { align-items: flex-end; text-align: right; }
+  .cell.mid { align-items: center; text-align: center; grid-column: 2; }
+
+  .label {
+    margin: 0;
+    font-family: var(--mono);
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--dim);
+  }
+
+  .value {
+    margin: 2px 0 0;
+    font-family: var(--display);
+    font-size: clamp(30px, 6vw, 52px);
+    line-height: 0.86;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .value.sm { font-size: clamp(17px, 2.6vw, 24px); }
+
+  .pips { display: flex; gap: 5px; margin-top: 7px; }
+
+  .pip {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--rose);
+  }
+
+  .pip[data-off="1"] { background: rgba(246, 240, 255, 0.18); }
+
+  .foot {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 14px;
+  }
+
+  .keys {
+    margin: 0;
+    max-width: 46ch;
+    font-size: 12px;
+    line-height: 1.55;
+    color: rgba(246, 240, 255, 0.5);
+  }
+
+  .keys b { color: rgba(246, 240, 255, 0.92); font-weight: 700; }
+
+  kbd {
+    font-family: var(--mono);
+    font-size: 10px;
+    border: 1px solid var(--line-strong);
+    border-radius: 4px;
+    padding: 1px 5px;
+  }
+
+  button {
+    pointer-events: auto;
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--pearl);
+    background: rgba(246, 240, 255, 0.06);
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    padding: 9px 15px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  button:hover { background: rgba(246, 240, 255, 0.12); }
+  button:active { transform: translateY(1px); }
+  button:focus-visible { outline: 2px solid var(--mint); outline-offset: 2px; }
+
+  .gate {
+    position: fixed;
+    inset: 0;
+    z-index: 5;
+    display: grid;
+    place-items: center;
+    padding: 20px;
+    background: radial-gradient(120% 90% at 50% 40%, rgba(11, 6, 24, 0.72), rgba(11, 6, 24, 0.96));
+    backdrop-filter: blur(3px);
+  }
+
+  .gate[hidden] { display: none; }
+
+  .card {
+    width: min(430px, 100%);
+    max-height: 100%;
+    overflow: auto;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--panel);
+    padding: clamp(22px, 4vw, 32px);
+    text-align: center;
+  }
+
+  .eyebrow {
+    margin: 0;
+    font-family: var(--mono);
+    font-size: 9.5px;
+    font-weight: 600;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--dim);
+  }
+
+  .card h1 {
+    margin: 12px 0 0;
+    font-family: var(--display);
+    font-size: clamp(44px, 10vw, 64px);
+    line-height: 0.88;
+    text-transform: uppercase;
+  }
+
+  .card h1 i { font-style: normal; color: var(--rose); }
+
+  .rules {
+    margin: 20px 0 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+    text-align: left;
+  }
+
+  .rules li {
+    display: flex;
+    gap: 11px;
+    align-items: flex-start;
+    font-size: 13.5px;
+    line-height: 1.5;
+    color: rgba(246, 240, 255, 0.76);
+  }
+
+  .rules[hidden] { display: none; }
+
+  .rules b { color: var(--pearl); font-weight: 700; }
+
+  .dot {
+    flex: none;
+    width: 10px;
+    height: 10px;
+    margin-top: 5px;
+    border-radius: 50%;
+    background: var(--rose);
+  }
+
+  .dot.i { background: var(--indigo); }
+  .dot.m { background: var(--mint); }
+
+  .final {
+    margin: 20px 0 0;
+    display: flex;
+    justify-content: center;
+    gap: 22px;
+  }
+
+  .final[hidden] { display: none; }
+  .final div { display: flex; flex-direction: column; gap: 5px; }
+
+  .final em {
+    font-family: var(--mono);
+    font-style: normal;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--dim);
+  }
+
+  .final span {
+    font-family: var(--display);
+    font-size: 28px;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .go {
+    margin-top: 24px;
+    width: 100%;
+    font-size: 12px;
+    padding: 14px 22px;
+    letter-spacing: 0.18em;
+    color: #1A0410;
+    background: var(--rose);
+    border-color: var(--rose);
+  }
+
+  .go:hover { background: #ff6088; border-color: #ff6088; color: #1A0410; }
+
+  .sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  @media (max-width: 620px) {
+    .keys { font-size: 11px; }
+    .value { font-size: 30px; }
+  }
+</style>
+
+<canvas id="stage" aria-label="Nocturne rhythm rings"></canvas>
+
+<div class="hud">
+  <div class="cell">
+    <p class="label">Score</p>
+    <p class="value" id="score">0</p>
+  </div>
+
+  <div class="cell mid">
+    <p class="label">Combo</p>
+    <p class="value sm" id="combo">0</p>
+  </div>
+
+  <div class="cell right">
+    <p class="label">Best</p>
+    <p class="value sm" id="best">0</p>
+    <div class="pips" id="lives"><i class="pip"></i><i class="pip"></i><i class="pip"></i></div>
+  </div>
+
+  <div class="foot">
+    <p class="keys">
+      Rings close on the circle. <b>Tap</b>, click or press <kbd>Space</kbd> the moment one lands on it.
+      Three misses and the night is over.
+    </p>
+    <button type="button" id="mute" aria-pressed="true">Sound on</button>
+  </div>
+</div>
+
+<div class="gate" id="gate">
+  <div class="card">
+    <p class="eyebrow" id="eyebrow">Rhythm · endless</p>
+    <h1 id="title">Noc<i>turne</i></h1>
+    <ul class="rules" id="rules">
+      <li><i class="dot"></i><span>Rings shrink toward the <b>steady circle</b>. Hit each one as it lands.</span></li>
+      <li><i class="dot i"></i><span><b>Dead on</b> scores double and builds your combo. Close still counts.</span></li>
+      <li><i class="dot m"></i><span>The tempo <b>creeps up</b>. Three missed rings and it ends.</span></li>
+    </ul>
+    <div class="final" id="final" hidden>
+      <div><em>Score</em><span id="f-score">0</span></div>
+      <div><em>Best combo</em><span id="f-combo">0</span></div>
+      <div><em>Best</em><span id="f-best">0</span></div>
+    </div>
+    <button class="go" id="start" type="button">Start</button>
+  </div>
+</div>
+
+<p class="sr" id="live" role="status" aria-live="polite"></p>
+
+<script>
+(function () {
+  "use strict";
+
+  var NIGHT = "#0B0618", ROSE = "#FF3B6B", INDIGO = "#7C5CFF", MINT = "#5BE8B0", PEARL = "#F6F0FF";
+
+  var TRAVEL = 1.9;          // seconds a ring takes to reach the target circle
+  var PERFECT = 0.055;       // |error| for a perfect hit
+  var GOOD = 0.125;          // |error| still counted
+  var LEAD = 0.25;           // how far ahead beats are scheduled on the audio clock
+  var MAX_LIVES = 3;
+
+  var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  var canvas = document.getElementById("stage");
+  var ctx = canvas.getContext("2d");
+  var gate = document.getElementById("gate");
+  var elScore = document.getElementById("score");
+  var elCombo = document.getElementById("combo");
+  var elBest = document.getElementById("best");
+  var elLives = document.getElementById("lives");
+  var elEyebrow = document.getElementById("eyebrow");
+  var elTitle = document.getElementById("title");
+  var elRules = document.getElementById("rules");
+  var elFinal = document.getElementById("final");
+  var elFScore = document.getElementById("f-score");
+  var elFCombo = document.getElementById("f-combo");
+  var elFBest = document.getElementById("f-best");
+  var elLive = document.getElementById("live");
+  var btnStart = document.getElementById("start");
+  var btnMute = document.getElementById("mute");
+
+  var W = 0, H = 0, cx = 0, cy = 0, dpr = 1, targetR = 150;
+
+  var state = "idle";        // idle | play | over
+  var rings = [], sparks = [], pops = [];
+  var score = 0, combo = 0, bestCombo = 0, best = 0, lives = MAX_LIVES;
+  var beatIndex = 0, nextBeat = 0, startedAt = 0, flash = 0, flashCol = PEARL, pulse = 0;
+  var soundOn = true, audio = null;
+
+  var SCALE = [261.63, 311.13, 349.23, 392.0, 466.16, 523.25, 622.25, 698.46];
+
+  /* ---------- storage ---------- */
+  try {
+    var stored = parseInt(window.localStorage.getItem("nocturne.best"), 10);
+    if (stored > 0) best = stored;
+  } catch (e) {}
+  elBest.textContent = best;
+
+  function saveBest() {
+    try { window.localStorage.setItem("nocturne.best", String(best)); } catch (e) {}
+  }
+
+  /* ---------- audio ---------- */
+  function ac() {
+    if (!audio) {
+      var C = window.AudioContext || window.webkitAudioContext;
+      if (!C) return null;
+      try { audio = new C(); } catch (e) { return null; }
+    }
+    if (audio.state === "suspended") audio.resume();
+    return audio;
+  }
+
+  // A rhythm game must be judged on a steady clock. requestAnimationFrame is
+  // throttled and jittery, so a beat placed by rAF slides out of step with the
+  // sound the player hears. The AudioContext clock is the steady one — but it
+  // has a different origin from performance.now(), so the source has to be
+  // chosen ONCE per run and held. Switching part-way (say, because a suspended
+  // context resumed) would reinterpret every scheduled beat against a new
+  // origin and throw the whole run out. Times below are seconds since the run
+  // began, whichever source is backing them.
+  var clockSource = "perf";   // "audio" | "perf", fixed for the run
+  var clockBase = 0;
+
+  function initClock() {
+    var a = ac();
+    if (a && a.state === "running") { clockSource = "audio"; clockBase = a.currentTime; }
+    else { clockSource = "perf"; clockBase = performance.now() / 1000; }
+  }
+
+  function clock() {
+    if (clockSource === "audio" && audio) return audio.currentTime - clockBase;
+    return performance.now() / 1000 - clockBase;
+  }
+
+  // Convert a run-relative beat time into an absolute AudioContext timestamp
+  // so notes can still be scheduled ahead even on the wall clock.
+  function toAudioTime(at) {
+    var a = audio;
+    if (!a) return 0;
+    if (clockSource === "audio") return at + clockBase;
+    return a.currentTime + (at - clock());
+  }
+
+  function tickSound(at, step, strong) {
+    if (!soundOn) return;
+    try {
+      var a = ac(); if (!a) return;
+      var t = Math.max(toAudioTime(at), a.currentTime);
+      var o = a.createOscillator(), g = a.createGain();
+      o.type = strong ? "triangle" : "sine";
+      o.frequency.setValueAtTime(SCALE[Math.min(step, SCALE.length - 1)], t);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(strong ? 0.07 : 0.035, t + 0.006);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.15);
+      o.connect(g); g.connect(a.destination);
+      o.start(t); o.stop(t + 0.17);
+    } catch (e) {}
+  }
+
+  function thud() {
+    if (!soundOn) return;
+    try {
+      var a = ac(); if (!a) return;
+      var t = a.currentTime;
+      var o = a.createOscillator(), g = a.createGain();
+      o.type = "sawtooth";
+      o.frequency.setValueAtTime(190, t);
+      o.frequency.exponentialRampToValueAtTime(46, t + 0.34);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.16, t + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.40);
+      o.connect(g); g.connect(a.destination);
+      o.start(t); o.stop(t + 0.42);
+    } catch (e) {}
+  }
+
+  btnMute.addEventListener("click", function () {
+    soundOn = !soundOn;
+    btnMute.textContent = soundOn ? "Sound on" : "Sound off";
+    btnMute.setAttribute("aria-pressed", String(soundOn));
+  });
+
+  // Coming back to a hidden tab should resume cleanly rather than resolve a
+  // backlog of beats the player never saw.
+  document.addEventListener("visibilitychange", function () {
+    if (document.hidden || state !== "play") return;
+    var now = clock();
+    rings = rings.filter(function (r) { return r.at > now; });
+    if (nextBeat < now) nextBeat = now + 1.0;
+  });
+
+  /* ---------- sizing ---------- */
+  function resize() {
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    W = window.innerWidth;
+    H = window.innerHeight;
+    canvas.width = Math.round(W * dpr);
+    canvas.height = Math.round(H * dpr);
+    canvas.style.width = W + "px";
+    canvas.style.height = H + "px";
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    cx = W / 2;
+    cy = H / 2;
+    targetR = Math.max(74, Math.min(W, H) * 0.19);
+  }
+
+  window.addEventListener("resize", resize);
+
+  /* ---------- tempo ---------- */
+  // seconds between beats, tightening as the run goes on
+  function interval() {
+    var played = beatIndex;
+    return Math.max(0.34, 0.82 - played * 0.0042);
+  }
+
+  function paintHud() {
+    elScore.textContent = score;
+    elCombo.textContent = combo;
+    for (var i = 0; i < elLives.children.length; i++) {
+      elLives.children[i].dataset.off = i < lives ? "0" : "1";
+    }
+  }
+
+  function say(m) { elLive.textContent = m; }
+
+  /* ---------- flow ---------- */
+  function reset() {
+    rings = []; sparks = []; pops = [];
+    score = 0; combo = 0; bestCombo = 0; lives = MAX_LIVES;
+    beatIndex = 0; flash = 0; pulse = 0;
+    paintHud();
+  }
+
+  function start() {
+    reset();
+    // pick the clock before anything is scheduled against it
+    initClock();
+    state = "play";
+    gate.hidden = true;
+    startedAt = 0;
+    // first ring lands a little after the run begins so there is time to read it
+    nextBeat = 1.1;
+    say("Started. Tap when a ring lands on the circle.");
+  }
+
+  function over() {
+    state = "over";
+    thud();
+    if (score > best) { best = score; saveBest(); elBest.textContent = best; }
+    elEyebrow.textContent = score >= best && score > 0 ? "New best" : "Out of time";
+    elTitle.innerHTML = "Sil<i>ence</i>";
+    elRules.hidden = true;
+    elFinal.hidden = false;
+    elFScore.textContent = score;
+    elFCombo.textContent = bestCombo;
+    elFBest.textContent = best;
+    btnStart.textContent = "Again";
+    gate.hidden = false;
+    say("Over. Score " + score + ", best combo " + bestCombo + ".");
+  }
+
+  // Rings must exist for the whole TRAVEL window, otherwise they appear a few
+  // pixels from the target circle and there is nothing to read. Their sound is a
+  // separate concern: it is scheduled only LEAD ahead, close to when it plays.
+  function schedule() {
+    var now = clock();
+
+    // A backgrounded tab keeps the clock running while rAF is stopped, so on
+    // return every missed beat would spawn at once — a wall of rings and
+    // oscillators that empties the lives bar before a frame is drawn. Re-anchor
+    // instead of catching up.
+    if (now - nextBeat > TRAVEL) {
+      nextBeat = now + 1.0;
+      rings = rings.filter(function (r) { return r.at > now; });
+    }
+
+    while (nextBeat < now + TRAVEL) {
+      rings.push({ at: nextBeat, hit: false, judged: false, sounded: false, step: beatIndex % 8, strong: beatIndex % 4 === 0 });
+      beatIndex++;
+      nextBeat += interval();
+    }
+
+    for (var i = 0; i < rings.length; i++) {
+      var r = rings[i];
+      if (!r.sounded && r.at - now <= LEAD) {
+        r.sounded = true;
+        tickSound(r.at, r.step, r.strong);
+      }
+    }
+  }
+
+  function judge() {
+    if (state !== "play") return;
+    var now = clock();
+    var bestRing = null, bestErr = Infinity;
+    for (var i = 0; i < rings.length; i++) {
+      var r = rings[i];
+      if (r.judged) continue;
+      var err = Math.abs(now - r.at);
+      if (err < bestErr) { bestErr = err; bestRing = r; }
+    }
+    if (!bestRing || bestErr > GOOD) {
+      // a stab at nothing still breaks the combo, so mashing is not a strategy
+      combo = 0;
+      flash = reduce ? 0 : 0.2;
+      flashCol = INDIGO;
+      paintHud();
+      return;
+    }
+
+    bestRing.judged = true;
+    bestRing.hit = true;
+    var perfect = bestErr <= PERFECT;
+    combo++;
+    if (combo > bestCombo) bestCombo = combo;
+    var mult = Math.min(8, 1 + Math.floor(combo / 5));
+    score += (perfect ? 20 : 10) * mult;
+    pops.push({ t: 0, perfect: perfect });
+    if (!reduce) {
+      flash = perfect ? 0.3 : 0.16;
+      flashCol = perfect ? MINT : ROSE;
+      burst(perfect ? MINT : ROSE, perfect ? 16 : 8);
+    }
+    pulse = 1;
+    paintHud();
+  }
+
+  function miss(r) {
+    r.judged = true;
+    r.hit = false;
+    combo = 0;
+    lives--;
+    paintHud();
+    if (!reduce) { flash = 0.34; flashCol = ROSE; }
+    if (lives <= 0) over();
+    else thud();
+  }
+
+  function burst(colour, n) {
+    for (var i = 0; i < n; i++) {
+      var a = Math.random() * Math.PI * 2;
+      var s = 90 + Math.random() * 210;
+      sparks.push({
+        x: cx + Math.cos(a) * targetR, y: cy + Math.sin(a) * targetR,
+        vx: Math.cos(a) * s, vy: Math.sin(a) * s,
+        life: 0.4 + Math.random() * 0.3, age: 0, c: colour
+      });
+    }
+  }
+
+  /* ---------- input ---------- */
+  function press() {
+    if (state === "idle") { start(); return; }
+    if (state === "over") { start(); return; }
+    judge();
+  }
+
+  canvas.addEventListener("pointerdown", function (e) { e.preventDefault(); press(); });
+
+  window.addEventListener("keydown", function (e) {
+    if (e.code !== "Space" && e.key !== " " && e.key !== "Enter") return;
+    e.preventDefault();
+    if (e.repeat) return;
+    if (state === "play") judge();
+    else btnStart.click();
+  });
+
+  btnStart.addEventListener("click", function (e) {
+    e.stopPropagation();
+    elRules.hidden = false;
+    elFinal.hidden = true;
+    btnStart.textContent = "Start";
+    start();
+  });
+
+  /* ---------- step ---------- */
+  function step(dt) {
+    schedule();
+    var now = clock();
+
+    for (var i = rings.length - 1; i >= 0; i--) {
+      var r = rings[i];
+      if (!r.judged && now - r.at > GOOD) miss(r);
+      // keep a judged ring around briefly so its collapse is visible
+      if (now - r.at > 0.55) rings.splice(i, 1);
+    }
+
+    for (var s = sparks.length - 1; s >= 0; s--) {
+      var sp = sparks[s];
+      sp.age += dt;
+      sp.x += sp.vx * dt; sp.y += sp.vy * dt;
+      sp.vx *= 0.93; sp.vy *= 0.93;
+      if (sp.age >= sp.life) sparks.splice(s, 1);
+    }
+
+    for (var p = pops.length - 1; p >= 0; p--) {
+      pops[p].t += dt;
+      if (pops[p].t > 0.5) pops.splice(p, 1);
+    }
+
+    flash = Math.max(0, flash - dt * 2.2);
+    pulse = Math.max(0, pulse - dt * 3);
+  }
+
+  /* ---------- draw ---------- */
+  function draw() {
+    ctx.fillStyle = NIGHT;
+    ctx.fillRect(0, 0, W, H);
+
+    var now = clock();
+
+    // soft ground glow
+    var grad = ctx.createRadialGradient(cx, cy, targetR * 0.2, cx, cy, Math.max(W, H) * 0.6);
+    grad.addColorStop(0, "rgba(124, 92, 255, 0.13)");
+    grad.addColorStop(1, "rgba(11, 6, 24, 0)");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+
+    // the steady circle everything is judged against
+    ctx.strokeStyle = "rgba(246, 240, 255, " + (0.35 + pulse * 0.4).toFixed(3) + ")";
+    ctx.lineWidth = 2 + pulse * 2.5;
+    ctx.beginPath();
+    ctx.arc(cx, cy, targetR, 0, Math.PI * 2);
+    ctx.stroke();
+
+    if (state !== "idle") {
+      for (var i = 0; i < rings.length; i++) {
+        var r = rings[i];
+        var remain = r.at - now;              // seconds until it lands
+        var progress = 1 - remain / TRAVEL;   // 0 at spawn, 1 on the circle
+        if (progress < 0) continue;
+
+        if (r.judged) {
+          // collapse inward on a hit, fade grey on a miss
+          var age = now - r.at;
+          var fade = Math.max(0, 1 - age / 0.45);
+          if (fade <= 0) continue;
+          ctx.strokeStyle = r.hit
+            ? "rgba(91, 232, 176, " + (fade * 0.9).toFixed(3) + ")"
+            : "rgba(246, 240, 255, " + (fade * 0.22).toFixed(3) + ")";
+          ctx.lineWidth = r.hit ? 3 : 2;
+          ctx.beginPath();
+          ctx.arc(cx, cy, Math.max(0, targetR * (r.hit ? 1 - fade * 0.35 : 1 + (1 - fade) * 0.12)), 0, Math.PI * 2);
+          ctx.stroke();
+          continue;
+        }
+
+        // Once the run ends, step() stops judging and culling rings, so a
+        // leftover ring keeps ageing while draw() runs. Its radius would go
+        // negative and canvas arc() throws. Drop anything past the hit window
+        // and clamp what remains.
+        if (remain < -GOOD) continue;
+        var rad = Math.max(0, targetR + (1 - progress) * Math.max(W, H) * 0.52);
+        var near = Math.max(0, 1 - Math.abs(remain) / 0.5);
+        ctx.strokeStyle = "rgba(255, 59, 107, " + (0.28 + near * 0.62).toFixed(3) + ")";
+        ctx.lineWidth = 2 + near * 3;
+        ctx.beginPath();
+        ctx.arc(cx, cy, rad, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    }
+
+    for (var s = 0; s < sparks.length; s++) {
+      var sp = sparks[s];
+      var f = 1 - sp.age / sp.life;
+      ctx.globalAlpha = Math.max(0, f);
+      ctx.fillStyle = sp.c;
+      ctx.beginPath();
+      ctx.arc(sp.x, sp.y, 2.4 * f + 0.6, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    for (var p = 0; p < pops.length; p++) {
+      var po = pops[p];
+      var a = Math.max(0, 1 - po.t / 0.5);
+      ctx.globalAlpha = a;
+      ctx.fillStyle = po.perfect ? MINT : PEARL;
+      ctx.font = "600 13px ui-monospace, Menlo, monospace";
+      ctx.textAlign = "center";
+      ctx.fillText(po.perfect ? "DEAD ON" : "CLOSE", cx, cy - targetR - 22 - (1 - a) * 16);
+      ctx.globalAlpha = 1;
+    }
+
+    if (flash > 0) {
+      ctx.fillStyle = flashCol === MINT
+        ? "rgba(91, 232, 176, " + (flash * 0.16).toFixed(3) + ")"
+        : flashCol === ROSE
+          ? "rgba(255, 59, 107, " + (flash * 0.18).toFixed(3) + ")"
+          : "rgba(124, 92, 255, " + (flash * 0.14).toFixed(3) + ")";
+      ctx.fillRect(0, 0, W, H);
+    }
+  }
+
+  /* ---------- loop ---------- */
+  var last = 0;
+
+  function frame(now) {
+    var dt = last ? Math.min((now - last) / 1000, 0.033) : 0;
+    last = now;
+    if (state === "play") step(dt);
+    draw();
+    requestAnimationFrame(frame);
+  }
+
+  // Opt-in probe (…/nocturne/?probe=1) for scripted checks.
+  if (window.location.search.indexOf("probe") !== -1) {
+    window.__nocturne = {
+      snapshot: function () {
+        return {
+          state: state, score: score, combo: combo, bestCombo: bestCombo,
+          lives: lives, beats: beatIndex, now: clock(),
+          pending: rings.filter(function (r) { return !r.judged; })
+            .map(function (r) { return +(r.at - clock()).toFixed(4); })
+        };
+      },
+      // hit the next pending ring exactly on time, for a timing-accuracy check
+      hitNext: function () {
+        var now = clock(), target = null;
+        for (var i = 0; i < rings.length; i++) {
+          if (rings[i].judged) continue;
+          if (!target || rings[i].at < target.at) target = rings[i];
+        }
+        if (!target) return null;
+        return +(target.at - now).toFixed(4);
+      },
+      judge: judge,
+      start: start
+    };
+  }
+
+  resize();
+  state = "idle";
+  requestAnimationFrame(frame);
+})();
+</script>
