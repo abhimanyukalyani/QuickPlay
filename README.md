@@ -80,6 +80,8 @@ means changing the site's URL is a rebuild, not a hand-edit of every game page.
    Add a recipe in the script if the game needs specific clicks to reach a good frame.
    Set `CHROME_PATH` if Playwright's bundled browser revision isn't the one on disk.
 
+The generated PNGs are committed, so `npm run build` never needs the network.
+
 ## Testing a game
 
 ```bash
@@ -110,15 +112,17 @@ than just "the page loaded":
   `performance.now()` and `audio.currentTime` have different origins, so switching source
   mid-run would reinterpret every scheduled beat.
 
-The generated PNGs are committed, so `npm run build` never needs the network.
-
 ## Deploying (Cloudflare Pages)
+
+**Connected.** The repo builds on Cloudflare Pages as the project `quickplay-games`, so
+every push gets a deployment and every pull request a branch preview at
+`https://<branch>.quickplay-games.pages.dev`.
 
 Pages was picked over Vercel for the free tier's unmetered bandwidth and requests — a game
 going viral shouldn't be able to produce a bill or a throttle.
 
-Connect the repo at [dash.cloudflare.com](https://dash.cloudflare.com) → Workers & Pages →
-Create → Pages → Connect to Git, then:
+It was connected at [dash.cloudflare.com](https://dash.cloudflare.com) → Workers & Pages →
+Create → Pages → Connect to Git, with these settings:
 
 | Setting | Value |
 | --- | --- |
@@ -142,7 +146,7 @@ All optional — the site builds and runs with none of them set.
 
 | Variable | Effect |
 | --- | --- |
-| `NEXT_PUBLIC_SITE_URL` | Canonical/OG/sitemap base URL. Only needed for a custom domain — on Cloudflare Pages the build derives `https://<project>.pages.dev` from `CF_PAGES_URL`, and outside Cloudflare it falls back to `https://quickplay.pages.dev`. |
+| `NEXT_PUBLIC_SITE_URL` | Canonical/OG/sitemap base URL. Only needed for a custom domain — on Cloudflare Pages the build derives `https://<project>.pages.dev` from `CF_PAGES_URL`, and outside Cloudflare it falls back to `https://quickplay-games.pages.dev`, matching the connected Pages project. |
 | `NEXT_PUBLIC_CF_BEACON_TOKEN` | Adds the Cloudflare Web Analytics beacon. Not needed on Cloudflare Pages — enabling Web Analytics on the project injects it into every page, including the static game pages. |
 | `NEXT_PUBLIC_ADSENSE_CLIENT` | AdSense publisher id (`ca-pub-…`). Until it is set, `components/ad-slot.tsx` renders nothing, so no empty ad boxes appear during the AdSense review. |
 
@@ -162,7 +166,6 @@ spoofable by anyone with devtools; the constraints stop accidental garbage, not 
 
 ## What still needs a human
 
-- Connect the repo to Cloudflare Pages (needs the Cloudflare account) with the settings above.
 - Switch the repository's default branch to `main` in GitHub → Settings → General. Not
   required for the deploy, but PRs and clones still point at the planning branch until it
   is changed.
