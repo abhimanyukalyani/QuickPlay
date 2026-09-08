@@ -130,7 +130,8 @@ for (const slug of SLUGS) {
     await page.evaluate((x) => window.__ballast.dropAt(x), ideal);
     placed = s.score;
   }
-  const skilled = await page.evaluate(() => window.__ballast.snapshot());
+  // the last snapshot's score is the final count, since the loop stops on game over
+  placed = (await page.evaluate(() => window.__ballast.snapshot())).score;
   if (placed > careless.score * 2) pass("ballast rewards balance", `${placed} crates vs ${careless.score} careless`);
   else fail("ballast rewards balance", `skilled ${placed}, careless ${careless.score}`);
   if (errs.length) fail("ballast no js errors", errs[0]);
