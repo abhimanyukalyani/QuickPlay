@@ -29,7 +29,7 @@ export const site = {
   url: (
     process.env.NEXT_PUBLIC_SITE_URL ??
     projectUrlFromCloudflare() ??
-    "https://quickplay.pages.dev"
+    "https://quickplay-games.pages.dev"
   ).replace(/\/+$/, ""),
   // Cloudflare Web Analytics beacon token; analytics stays off until this is set.
   cfBeaconToken: process.env.NEXT_PUBLIC_CF_BEACON_TOKEN ?? "",

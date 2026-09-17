@@ -5,21 +5,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Chain Bloom — Play Free Online | QuickPlay</title>
 <meta name="description" content="Chain Bloom is a free browser chain-reaction game across twelve levels. You get exactly one click: place your bloom, then watch it spread through the drifting field. Timing beats aim — wait for the dots to gather.">
-<link rel="canonical" href="https://quickplay.pages.dev/games/chain-bloom/">
+<link rel="canonical" href="https://quickplay-games.pages.dev/games/chain-bloom/">
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
 <meta name="theme-color" content="#0E0920">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="QuickPlay">
 <meta property="og:title" content="Chain Bloom — Play Free Online | QuickPlay">
 <meta property="og:description" content="Chain Bloom is a free browser chain-reaction game across twelve levels. You get exactly one click: place your bloom, then watch it spread through the drifting field. Timing beats aim — wait for the dots to gather.">
-<meta property="og:url" content="https://quickplay.pages.dev/games/chain-bloom/">
-<meta property="og:image" content="https://quickplay.pages.dev/og/chain-bloom.png">
+<meta property="og:url" content="https://quickplay-games.pages.dev/games/chain-bloom/">
+<meta property="og:image" content="https://quickplay-games.pages.dev/og/chain-bloom.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Chain Bloom — Play Free Online | QuickPlay">
 <meta name="twitter:description" content="Chain Bloom is a free browser chain-reaction game across twelve levels. You get exactly one click: place your bloom, then watch it spread through the drifting field. Timing beats aim — wait for the dots to gather.">
-<meta name="twitter:image" content="https://quickplay.pages.dev/og/chain-bloom.png">
+<meta name="twitter:image" content="https://quickplay-games.pages.dev/og/chain-bloom.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Instrument+Sans:wght@400;500;600&family=Martian+Mono:wght@400;600&display=swap">
 <style>
   :root {
@@ -340,6 +340,7 @@
           <div><em>Needed</em><span id="tally-need">0</span></div>
           <div><em>Chain</em><span id="tally-chain">0</span></div>
         </div>
+        <div class="qp-lb" id="qp-lb"></div>
         <button class="go" id="card-action" type="button">Start</button>
       </div>
     </div>
@@ -618,6 +619,7 @@
     if (won && levelIndex + 2 > bestLevel) {
       bestLevel = Math.min(levelIndex + 2, LEVELS.length);
       saveBest();
+      if (window.QPLeaderboard) QPLeaderboard.submitScore("chain-bloom", bestLevel);
     }
     paintHud();
     showCard();
@@ -700,6 +702,9 @@
       cardBody.innerHTML = "Fifty-five of sixty on the last board. That is about as far as this thing goes — start over and try to do it with tighter chains.";
       cardAction.textContent = "Play again";
     }
+    if (window.QPLeaderboard) {
+      QPLeaderboard.renderLeaderboard(document.getElementById("qp-lb"), "chain-bloom");
+    }
     overlay.hidden = false;
     cardAction.focus();
     say(cardTitle.textContent + " " + cardBody.textContent);
@@ -749,5 +754,6 @@
   requestAnimationFrame(frame);
 })();
 </script>
+<script src="/leaderboard.js"></script>
 </body>
 </html>

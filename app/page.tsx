@@ -76,8 +76,9 @@ export default function Home() {
             not reposts from somewhere else.
           </p>
           <p>
-            <b className="text-txt">Your scores stay yours.</b> Best runs are saved in your own
-            browser. Nothing is uploaded, nothing is tracked to you.
+            <b className="text-txt">Your scores, your call.</b> Best runs are always saved in your
+            own browser first. Add a nickname if you want a run on the global leaderboard —
+            nothing else about you is ever collected.
           </p>
         </div>
       </section>

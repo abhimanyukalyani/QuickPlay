@@ -296,6 +296,7 @@
           <div><em>Needed</em><span id="tally-need">0</span></div>
           <div><em>Chain</em><span id="tally-chain">0</span></div>
         </div>
+        <div class="qp-lb" id="qp-lb"></div>
         <button class="go" id="card-action" type="button">Start</button>
       </div>
     </div>
@@ -574,6 +575,7 @@
     if (won && levelIndex + 2 > bestLevel) {
       bestLevel = Math.min(levelIndex + 2, LEVELS.length);
       saveBest();
+      if (window.QPLeaderboard) QPLeaderboard.submitScore("chain-bloom", bestLevel);
     }
     paintHud();
     showCard();
@@ -655,6 +657,9 @@
       cardTitle.textContent = "Field cleared.";
       cardBody.innerHTML = "Fifty-five of sixty on the last board. That is about as far as this thing goes — start over and try to do it with tighter chains.";
       cardAction.textContent = "Play again";
+    }
+    if (window.QPLeaderboard) {
+      QPLeaderboard.renderLeaderboard(document.getElementById("qp-lb"), "chain-bloom");
     }
     overlay.hidden = false;
     cardAction.focus();
