@@ -4,11 +4,16 @@ import { useEffect, useState } from "react";
 
 type ScoreRow = { name: string; score: number; updated_at: number };
 
+const asLevel = (n: number) => `Level ${n}`;
+
 // Mirrors the formatting in public/leaderboard.js — a game's "score" isn't always points
-// (Chain Bloom's is the furthest level reached). Kept as a small local map here rather
-// than shared with that plain script, since the two run in different build pipelines.
+// (Chain Bloom, Refract and Lantern rank by furthest level reached). Kept as a small
+// local map here rather than shared with that plain script, since the two run in
+// different build pipelines.
 const SCORE_FORMAT: Record<string, (n: number) => string> = {
-  "chain-bloom": (n) => `Level ${n}`,
+  "chain-bloom": asLevel,
+  refract: asLevel,
+  lantern: asLevel,
 };
 
 function formatScore(slug: string, score: number) {

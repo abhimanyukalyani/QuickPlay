@@ -10,11 +10,16 @@
   var NAME_KEY = "qp.name";
   var NAME_RE = /^[A-Za-z0-9 _.-]{2,20}$/;
 
-  // A game's numeric score isn't always "points" — Chain Bloom's is a level number.
+  // A game's numeric score isn't always "points" — for Chain Bloom, Refract and
+  // Lantern it's the furthest level reached.
+  function asLevel(n) {
+    return "Level " + n;
+  }
+
   var SCORE_FORMAT = {
-    "chain-bloom": function (n) {
-      return "Level " + n;
-    },
+    "chain-bloom": asLevel,
+    refract: asLevel,
+    lantern: asLevel,
   };
 
   function formatScore(gameSlug, score) {
@@ -62,6 +67,12 @@
     }
   }
 
+  // Whether submitScore would post silently. A game that reaches its end mid-play,
+  // with no card in the way, uses this to avoid interrupting the run with a prompt.
+  function hasName() {
+    return !!getName();
+  }
+
   // Prompts once, remembers the answer. Returns null if the player cancels.
   function ensureName() {
     var existing = getName();
@@ -103,7 +114,11 @@
     stylesInjected = true;
     var style = document.createElement("style");
     style.textContent =
-      ".qp-lb { margin-top: 14px; text-align: left; }" +
+      // align-self, because a game card is usually a column flexbox that would
+      // otherwise shrink-wrap the panel to its longest nickname
+      ".qp-lb { margin-top: 14px; text-align: left; align-self: stretch; }" +
+      // it lives outside the stats row, so an unfilled panel must take no space
+      ".qp-lb:empty { display: none; }" +
       ".qp-lb-head { font: 600 10px/1 var(--mono, ui-monospace, monospace); text-transform: uppercase;" +
       " letter-spacing: 0.14em; color: var(--dim, #9a94ab); margin-bottom: 6px; }" +
       ".qp-lb-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; }" +
@@ -174,6 +189,7 @@
 
   window.QPLeaderboard = {
     getClientId: getClientId,
+    hasName: hasName,
     ensureName: ensureName,
     submitScore: submitScore,
     renderLeaderboard: renderLeaderboard,

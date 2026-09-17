@@ -22,18 +22,21 @@ export default function LeaderboardsPage() {
       </p>
 
       <div className="mt-8 grid gap-6 sm:grid-cols-3">
-        {games.map((game) => (
-          <div key={game.slug} className="rounded-md border border-edge bg-surface p-5">
-            <h2 className="font-display text-[20px] uppercase leading-none">
-              <a href={gameUrl(game.slug)} className="transition hover:text-hot">
-                {game.title}
-              </a>
-            </h2>
-            <div className="mt-4">
-              <LeaderboardList slug={game.slug} />
+        {/* Longwave opts out: an idle game has no run that ends, so nothing to rank. */}
+        {games
+          .filter((game) => game.leaderboard !== false)
+          .map((game) => (
+            <div key={game.slug} className="rounded-md border border-edge bg-surface p-5">
+              <h2 className="font-display text-[20px] uppercase leading-none">
+                <a href={gameUrl(game.slug)} className="transition hover:text-hot">
+                  {game.title}
+                </a>
+              </h2>
+              <div className="mt-4">
+                <LeaderboardList slug={game.slug} />
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
       </div>
 
       <AdSlot slotId="leaderboards-below-grid" className="mt-10" />

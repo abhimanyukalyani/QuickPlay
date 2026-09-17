@@ -24,6 +24,15 @@ const GAME_BOUNDS: Record<string, { min: number; max: number }> = {
   flipshield: { min: 0, max: 200_000 },
   slingline: { min: 0, max: 20_000 },
   "chain-bloom": { min: 1, max: 12 },
+  // Level-based games are bounded by their own content; the endless ones get a
+  // ceiling set well past any plausible human run, so the bound rejects garbage
+  // without ever rejecting a real score.
+  refract: { min: 1, max: 12 },
+  // 20 points x8 combo multiplier, at the 0.34s tempo floor, is ~470/s.
+  nocturne: { min: 0, max: 500_000 },
+  ballast: { min: 0, max: 1_000 },
+  telegraph: { min: 0, max: 10_000 },
+  lantern: { min: 1, max: 500 },
 };
 
 // 2-20 chars, no markup-relevant characters — belt-and-braces alongside textContent
