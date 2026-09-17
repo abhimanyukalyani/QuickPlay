@@ -10,6 +10,12 @@ Live games:
 | Flipshield | `/games/flipshield/` | `games-src/flipshield.html` |
 | Chain Bloom | `/games/chain-bloom/` | `games-src/chain-bloom.html` |
 | Slingline | `/games/slingline/` | `games-src/slingline.html` |
+| Longwave | `/games/longwave/` | `games-src/longwave.html` |
+| Refract | `/games/refract/` | `games-src/refract.html` |
+| Nocturne | `/games/nocturne/` | `games-src/nocturne.html` |
+| Ballast | `/games/ballast/` | `games-src/ballast.html` |
+| Telegraph | `/games/telegraph/` | `games-src/telegraph.html` |
+| Lantern | `/games/lantern/` | `games-src/lantern.html` |
 
 ## Running it
 
@@ -19,11 +25,34 @@ npm run dev          # http://localhost:3000
 npm run games        # regenerate the game pages from games-src/
 npm run build        # runs games, then a static export into out/
 npm run serve        # serve the built site at http://localhost:3000
+npm run test:games   # drive all nine in a real browser (needs `npm run serve` running)
+npm run lint
+npx tsc --noEmit
 ```
 
 `next.config.ts` sets `output: "export"`, so the build produces a folder of static files
 with no server component. Nothing in the app uses request-time APIs — keep it that way and
 the site stays deployable anywhere.
+
+## Testing
+
+`scripts/test-games.mjs` opens every game in headless Chromium and asserts it actually
+works, rather than merely loading: Refract's twelve levels are re-solved through the DOM,
+Ballast's difficulty curve is measured across simulated runs, Nocturne's rings are hit on
+the beat off its own audio clock, Lantern's generated paths are walked. Each game exposes
+a read-only probe under `?probe=1` (`window.__<slug>`) that is absent from a normal page
+load; that is what makes the assertions possible.
+
+```bash
+npm run build
+npm run serve                        # in another shell
+npm run test:games                   # or: node scripts/test-games.mjs http://localhost:3000
+```
+
+Set `CHROME_PATH` if Playwright's bundled browser revision isn't the one on disk. The
+suite serves the static export, which has no Pages Functions — so `/api/scores/` 404s
+there by design, and the suite asserts the leaderboard panel degrades to its empty state
+instead of treating that as noise.
 
 ## Layout
 
@@ -40,7 +69,8 @@ public/games/<slug>/    the built game page (generated — edit games-src/ inste
 public/leaderboard.js   shared client script every game page loads: nickname, submit, render
 public/thumbs/       gameplay stills used on the home-page cards
 public/og/           1200x630 share images used in og:image tags
-scripts/             the tooling below
+scripts/             the tooling below: game pages, OG images, thumbnails
+scripts/test-games.mjs  the headless browser suite — see "Testing" above
 wrangler.toml        D1 binding config Cloudflare Pages Functions reads at deploy time
 ```
 
@@ -74,6 +104,17 @@ is a rebuild, not a hand-edit of three files.
    node scripts/capture-thumbs.mjs http://localhost:3000
    ```
    Add a recipe in the script if the game needs specific clicks to reach a good frame.
+5. Put it on the leaderboard. Add a `GAME_BOUNDS` entry in
+   `functions/api/scores/[game].ts` — without one the API 404s every submission for that
+   slug, silently. Add `<div class="qp-lb" id="qp-lb"></div>` to the game's end screen and
+   call `QPLeaderboard.submitScore(slug, score)` then `renderLeaderboard(el, slug)` when a
+   run ends. If the score is a level rather than points, add the slug to `SCORE_FORMAT` in
+   **both** `public/leaderboard.js` and `components/leaderboard-list.tsx`. A game with no
+   run that ends sets `leaderboard: false` in its registry entry instead, which keeps it
+   off `/leaderboards/` — Longwave is the only one.
+6. Run the suite: `npm run build && npm run serve`, then `npm run test:games`. It asserts
+   nine games, nine cards, eleven sitemap URLs and the leaderboard wiring, so a half-added
+   game fails it.
 
 The generated PNGs are committed, so `npm run build` never needs the network.
 
@@ -82,8 +123,10 @@ The generated PNGs are committed, so `npm run build` never needs the network.
 Pages was picked over Vercel for the free tier's unmetered bandwidth and requests — a game
 going viral shouldn't be able to produce a bill or a throttle.
 
-Connect the repo at [dash.cloudflare.com](https://dash.cloudflare.com) → Workers & Pages →
-Create → Pages → Connect to Git, then:
+The **quickplay-games** project is already connected to this repository and deploying. The
+settings it was created with, for reference or for recreating it elsewhere
+([dash.cloudflare.com](https://dash.cloudflare.com) → Workers & Pages → Create → Pages →
+Connect to Git):
 
 | Setting | Value |
 | --- | --- |
@@ -144,7 +187,6 @@ All optional — the site builds and runs with none of them set.
 
 ## What still needs a human
 
-- Connect the repo to Cloudflare Pages (needs the Cloudflare account) with the settings above.
 - Switch the repository's default branch to `main` in GitHub → Settings → General. Not
   required for the deploy, but PRs and clones still point at the planning branch until it
   is changed.
